@@ -1,6 +1,4 @@
-# template-project
-
-This repository contains the [research compendium](https://research-compendium.science) for the project: X. The compendium is a collection of all digital parts of the research project to date.
+# SBE: Sabah Biodiversity Project
 
 ## Contents:
 
