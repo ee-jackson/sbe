@@ -221,8 +221,9 @@ data_backfilled <-
   data_backfilled %>%
   dplyr::group_by(plant_id) %>%
   arrange(survey_date, .by_group = TRUE) %>%
-  tidyr::fill(species_mix:planting_date, .direction = "updown") %>%
-  ungroup()
+  ungroup() %>%
+  tidyr::fill(species_mix:planting_date, .direction = "updown")
+
 
 # "new" cohort of plants were first surveyed in census "06"
 data_backfilled <-
@@ -301,6 +302,42 @@ data_backfilled <-
   ) %>%
   ungroup()
 
+
+# Create time variable ----------------------------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  group_by(plant_id) %>%
+  slice_min(survey_date, with_ties = FALSE) %>%
+  select(plant_id, survey_date) %>%
+  rename(first_survey = survey_date) %>%
+  ungroup() %>%
+  right_join(data_backfilled, by = "plant_id")
+
+# data_backfilled <-
+#   data_backfilled %>%
+#   rowwise() %>%
+#   mutate(
+#     days =
+#       survey_date - first_survey) %>%
+#   ungroup() %>%
+#   mutate(years = as.numeric(days, units = "weeks")/52.25,
+#          days_num = as.numeric(days))
+
+
+# Clean survival ----------------------------------------------------------
+
+# remove left censored trees
+left_censored <-
+  data_backfilled %>%
+  filter(survival == 0 &
+             first_survey == survey_date) %>%
+  select(plant_id) %>%
+  distinct()
+
+data_backfilled <-
+  data_backfilled %>%
+  filter(!plant_id %in% left_censored$plant_id)
 
 # Clean cohort ------------------------------------------------------------
 
