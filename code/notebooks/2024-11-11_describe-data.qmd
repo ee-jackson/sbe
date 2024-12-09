@@ -1,0 +1,84 @@
+---
+title: "SBE data summary"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+```{r}
+#| output: FALSE
+
+library("tidyverse")
+library("here")
+library("patchwork")
+```
+
+```{r}
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
+```
+
+```{r}
+data %>% 
+  group_by(species_mix, plot) %>% 
+  summarise(n_species = n_distinct(genus_species)) %>% 
+  arrange(plot)
+```
+
+```{r}
+data %>% 
+  mutate(forest = "SBE") %>% 
+  mutate(census_type = str_extract(census_id, "[a-z]+" )) %>% 
+  mutate(month = lubridate::month(survey_date)) %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(x = census_type, y = survey_date, 
+             colour = census_type)) +
+  geom_point(alpha = 0.6, shape = "—", size = 10) +
+  theme_bw(base_size=20) +
+  scale_y_date(minor_breaks = "year") +
+  theme(legend.position = "none")
+```
+
+```{r}
+data %>% 
+  mutate(month = lubridate::month(survey_date)) %>% 
+  mutate(forest_type = "SBE") %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(x = forest_type, y = survey_date, 
+             colour = census_no)) +
+  geom_point(alpha = 0.6, shape = "—", size = 10) +
+  theme_bw(base_size=20) +
+  scale_y_date(minor_breaks = "year") +
+  scale_colour_viridis_d() +
+  theme(legend.position = "none")
+```
+
+
+```{r}
+data %>% 
+  mutate(census_type = str_extract(census_id, "[a-z]+" )) %>% 
+  select(census_type, plot) %>% 
+  distinct() %>% 
+  arrange(census_type) %>% 
+  knitr::kable()
+```
+
