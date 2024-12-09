@@ -60,6 +60,8 @@ new_census %>%
   labs(x = "DBH /cm")
 ```
 
+### Trees above 50cm DBH
+
 ```{r}
 new_census %>% 
   filter(dbh_mean > 50) %>% 
@@ -80,6 +82,23 @@ new_census %>%
 new_census %>% 
   filter(dbh_mean > 50) %>% 
   group_by(genus_species) %>% 
+  summarise(n_distinct(plant_id)) %>% 
+  arrange(`n_distinct(plant_id)`
+          |> desc() ) %>% 
+  knitr::kable()
+```
+
+```{r}
+new_census %>% 
+  mutate(treatment = case_when(
+    plot %in% c("005", "011", "014", "022", "029", "032", "040", "046", 
+                "049", "064", "115", "111", "100", "091", "085", "075") ~ "16-species-cut",
+    str_detect(species_mix, "4-species") ~ "4-species",
+    str_detect(species_mix, "16-species") ~ "16-species",
+    str_detect(species_mix, "monoculture") ~ "monoculture"
+  )) %>% 
+  filter(dbh_mean > 50) %>% 
+  group_by(treatment) %>% 
   summarise(n_distinct(plant_id)) %>% 
   arrange(`n_distinct(plant_id)`
           |> desc() ) %>% 
