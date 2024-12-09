@@ -1,0 +1,87 @@
+---
+title: "Tree sizes"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+Are the planted trees reaching the canopy yet?
+Looking at DBH recorded in the latest full census.
+
+```{r}
+#| output: FALSE
+
+library("tidyverse")
+library("here")
+library("patchwork")
+```
+
+```{r}
+new_census <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  filter(census_id == "full_measurement_03") 
+
+new_census %>% 
+  drop_na(dbh_mean) %>% 
+  glimpse()
+```
+
+```{r}
+new_census %>% 
+  summarise(
+    mean = mean(dbh_mean, na.rm = TRUE),
+    median = median(dbh_mean, na.rm = TRUE),
+    max = max(dbh_mean, na.rm = TRUE),
+    min = min(dbh_mean, na.rm = TRUE)
+  )
+```
+
+```{r}
+new_census %>% 
+  ggplot(aes(x = dbh_mean)) +
+  geom_density() +
+  labs(x = "DBH /cm")
+```
+
+```{r}
+new_census %>% 
+  filter(dbh_mean > 50) %>% 
+  nrow()
+```
+
+```{r}
+new_census %>% 
+  filter(dbh_mean > 50) %>% 
+  group_by(plot) %>% 
+  summarise(n_distinct(plant_id)) %>% 
+  arrange(`n_distinct(plant_id)`
+          |> desc() ) %>% 
+  knitr::kable()
+```
+
+```{r}
+new_census %>% 
+  filter(dbh_mean > 50) %>% 
+  group_by(genus_species) %>% 
+  summarise(n_distinct(plant_id)) %>% 
+  arrange(`n_distinct(plant_id)`
+          |> desc() ) %>% 
+  knitr::kable()
+```
