@@ -2,7 +2,9 @@
 title: "Tree sizes"
 author: 'eleanorjackson'
 date: '`r format(Sys.time(), "%d %B, %Y")`' 
-format: gfm+emoji
+format: 
+  gfm:
+    toc: true
 editor: source
 execute:
   warning: false
@@ -23,7 +25,10 @@ ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
 ```
 
 Are the planted trees reaching the canopy yet?
-Looking at DBH recorded in the latest full census.
+
+## DBH
+
+Looking at DBH recorded in the latest full census of the SBE.
 
 ```{r}
 #| output: FALSE
@@ -39,39 +44,55 @@ new_census <-
   filter(census_id == "full_measurement_03") 
 
 new_census %>% 
-  drop_na(dbh_mean) %>% 
+  drop_na(dbh_mm) %>% 
   glimpse()
 ```
 
 ```{r}
 new_census %>% 
   summarise(
-    mean = mean(dbh_mean, na.rm = TRUE),
-    median = median(dbh_mean, na.rm = TRUE),
-    max = max(dbh_mean, na.rm = TRUE),
-    min = min(dbh_mean, na.rm = TRUE)
+    mean = mean(dbh_mm, na.rm = TRUE),
+    median = median(dbh_mm, na.rm = TRUE),
+    max = max(dbh_mm, na.rm = TRUE),
+    min = min(dbh_mm, na.rm = TRUE)
   )
 ```
 
 ```{r}
 new_census %>% 
-  ggplot(aes(x = dbh_mean)) +
+  ggplot(aes(x = dbh_mm)) +
   geom_density() +
-  labs(x = "DBH /cm")
+  labs(x = "DBH /mm")
 ```
 
-### Trees above 50cm DBH
 
 ```{r}
 new_census %>% 
-  filter(dbh_mean > 50) %>% 
+  mutate(treatment = case_when(
+    plot %in% c("005", "011", "014", "022", "029", "032", "040", "046", 
+                "049", "064", "115", "111", "100", "091", "085", "075") ~ "16-species-cut",
+    str_detect(species_mix, "4-species") ~ "4-species",
+    str_detect(species_mix, "16-species") ~ "16-species",
+    str_detect(species_mix, "monoculture") ~ "monoculture"
+  )) %>% 
+  ggplot(aes(x = dbh_mm)) +
+  geom_density() +
+  labs(x = "DBH /mm") +
+  facet_wrap(~treatment)
+```
+
+### Trees above 30cm DBH
+
+```{r}
+new_census %>% 
+  filter(dbh_mm > 300) %>% 
   nrow()
 ```
 
 ```{r}
 new_census %>% 
-  filter(dbh_mean > 50) %>% 
-  group_by(plot) %>% 
+  filter(dbh_mm > 300) %>% 
+  group_by(plot, species_mix) %>% 
   summarise(n_distinct(plant_id)) %>% 
   arrange(`n_distinct(plant_id)`
           |> desc() ) %>% 
@@ -80,7 +101,7 @@ new_census %>%
 
 ```{r}
 new_census %>% 
-  filter(dbh_mean > 50) %>% 
+  filter(dbh_mm > 300) %>% 
   group_by(genus_species) %>% 
   summarise(n_distinct(plant_id)) %>% 
   arrange(`n_distinct(plant_id)`
@@ -97,10 +118,90 @@ new_census %>%
     str_detect(species_mix, "16-species") ~ "16-species",
     str_detect(species_mix, "monoculture") ~ "monoculture"
   )) %>% 
-  filter(dbh_mean > 50) %>% 
+  filter(dbh_mm > 300) %>% 
   group_by(treatment) %>% 
   summarise(n_distinct(plant_id)) %>% 
   arrange(`n_distinct(plant_id)`
           |> desc() ) %>% 
   knitr::kable()
+```
+
+## Height
+
+Using a Weibull function to estimate tree height from DBH:
+
+predicted height = _a_\*(1 − exp(−_b_\*DBH^_c_^))
+
+Parameters _a, b_ and _c_ from [Feldpausch _et al._ 2012](https://doi.org/10.5194/bg-9-3381-2012) (Asia-specific model).
+
+```{r}
+a <- 57.122	
+
+b <- 0.0332	
+
+c <- 0.8468	
+```
+
+```{r}
+get_height <- function(dbh, a, b, c) {
+  height <-
+    a * (1-exp(-b * (dbh)^c))
+  
+  return(height)
+}
+```
+
+So for a tree with DBH of 50 mm, the predicted height is:
+
+```{r}
+get_height(dbh = 50,
+           a = a,
+           b = b,
+           c = c)
+```
+
+Across the all the SBE planted trees:
+
+```{r}
+new_census %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_mm,
+                                     a = a,
+                                     b = b,
+                                     c = c) ) %>% 
+  ggplot(aes(x = tree_height_m)) +
+  geom_density() 
+```
+
+By treatment:
+
+```{r}
+new_census %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_mm,
+                                     a = a,
+                                     b = b,
+                                     c = c) ) %>% 
+  mutate(treatment = case_when(
+    plot %in% c("005", "011", "014", "022", "029", "032", "040", "046", 
+                "049", "064", "115", "111", "100", "091", "085", "075") ~ "16-species-cut",
+    str_detect(species_mix, "4-species") ~ "4-species",
+    str_detect(species_mix, "16-species") ~ "16-species",
+    str_detect(species_mix, "monoculture") ~ "monoculture"
+  )) %>% 
+  ggplot(aes(x = tree_height_m)) +
+  geom_density() +
+  facet_wrap(~treatment)
+```
+
+By species:
+
+```{r}
+new_census %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_mm,
+                                     a = a,
+                                     b = b,
+                                     c = c) ) %>% 
+  drop_na(genus_species) %>% 
+  ggplot(aes(x = tree_height_m)) +
+  geom_density() +
+  facet_wrap(~genus_species)
 ```
