@@ -15,20 +15,21 @@ library("janitor")
 
 # Get data ----------------------------------------------------------------
 
+
 data_sbe <-
   read_csv(
     here::here("data", "raw", "SBE_compiled_data_2002-2024.csv")
   ) %>%
   clean_names() %>%
-  rename(cohort = o_n,
+  rename(old_new = o_n,
          planting_date = plantingdate,
          survey_date = surveydate,
          height_apex = heightapex) %>%
-  mutate(across(c(cohort, survival), str_trim)) %>%
+  mutate(across(c(old_new, survival), str_trim)) %>%
 
   mutate(plot = ifelse(is.na(pl), NA,
                        formatC(pl,
-                               width = 3,
+                               width = 2,
                                format = "d",
                                flag = "0")),
          line = ifelse(is.na(li), NA,
@@ -52,7 +53,7 @@ data_sbe <-
     planting_date = dmy(planting_date),
     survey_date = dmy(survey_date),
     census_id = as.factor(paste(data_origin, sample, sep = "_")),
-    plant_id = paste(plot, line, position, cohort, sep = "_"),
+    plant_id = paste(plot, line, position, old_new, sep = "_"),
     survival = case_when(
       survival == "yes" ~ 1,
       survival == "no" ~ 0,
@@ -63,7 +64,8 @@ data_sbe <-
     is.na(position) ~ paste(plant_id, species, sep = "_"),
     .default = plant_id
   )) %>%
-  select(plant_id, plot, species_mix, line, position, cohort,
+  # Making cols match the primary forest data
+  select(plant_id, plot, species_mix, line, position, old_new,
          genus, species, genus_species,
          planting_date, census_id, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
@@ -167,6 +169,7 @@ data_sbe <-
 
 # Backfill dead plants ----------------------------------------------------
 
+
 # concatenate plot and line as not complete cases in each census
 data_sbe <-
   data_sbe %>%
@@ -187,10 +190,10 @@ keys <-
   data_sbe %>%
   select(census_id, census_no, plot_line) %>%
   distinct() %>%
-  left_join(plants_in_plots, by = "plot_line")
+  left_join(plants_in_plots, by = c("plot_line"))
 
 # function to backfill missing trees as dead
-backfill_trees <- function(census_name, census, plot_no,
+backfill_trees <- function(census_name, census, plot_no, site,
                            tree_ids, data) {
   data %>%
     filter(census_id == census_name,
@@ -216,22 +219,21 @@ data_backfilled <-
   ) %>%
   bind_rows()
 
-# fill missing plant level data for backfilled plants
-data_backfilled <-
-  data_backfilled %>%
-  dplyr::group_by(plant_id) %>%
-  arrange(survey_date, .by_group = TRUE) %>%
-  ungroup() %>%
-  tidyr::fill(species_mix:planting_date, .direction = "updown")
-
-
 # "new" cohort of plants were first surveyed in census "06"
 data_backfilled <-
   data_backfilled %>%
   filter(!
-           (cohort == "N" &
+           (old_new == "N" &
               census_no %in% c("01", "02", "03", "04", "05") )
   )
+
+# fill missing plant level data for backfilled plants
+data_backfilled <-
+  data_backfilled %>%
+  dplyr::group_by(plant_id) %>%
+  arrange(census_no, .by_group = TRUE) %>%
+  tidyr::fill(species_mix:planting_date, .direction = "updown") %>%
+  ungroup()
 
 # add survey dates for for backfilled plants
 data_backfilled <-
@@ -285,8 +287,8 @@ data_backfilled <-
       survey_date > last_alive ~ 0,
 
       is.na(survey_date) ~ NA
-      )
-    ) %>%
+    )
+  ) %>%
   select(- last_alive) %>%
   bind_rows(filter(data_backfilled, ! plant_id %in% lazarus_ids))
 
@@ -297,8 +299,8 @@ data_backfilled <-
   data_backfilled %>%
   rowwise() %>%
   mutate(
-    dbh_mean = mean(c(dbh1, dbh2), na.rm = TRUE),
-    dbase_mean = mean(c(diam1, diam2), na.rm = TRUE)
+    dbh_mm = mean(c(dbh1, dbh2), na.rm = TRUE),
+    dbase_mm = mean(c(diam1, diam2), na.rm = TRUE)
   ) %>%
   ungroup()
 
@@ -312,7 +314,7 @@ data_backfilled <-
   select(plant_id, survey_date) %>%
   rename(first_survey = survey_date) %>%
   ungroup() %>%
-  right_join(data_backfilled, by = "plant_id")
+  right_join(data_backfilled)
 
 # data_backfilled <-
 #   data_backfilled %>%
@@ -335,17 +337,21 @@ left_censored <-
   select(plant_id) %>%
   distinct()
 
+paste(pull(count(left_censored), 1),
+      "trees died before the first survey", sep = " ")
+
 data_backfilled <-
   data_backfilled %>%
   filter(!plant_id %in% left_censored$plant_id)
+
 
 # Clean cohort ------------------------------------------------------------
 
 data_backfilled <-
   data_backfilled %>%
   mutate(cohort = case_when(
-    cohort == "O" ~ 1,
-    cohort == "N" ~ 2
+    old_new == "O" ~ 1,
+    old_new == "N" ~ 2
   ))
 
 
@@ -355,10 +361,10 @@ data_backfilled <-
   data_backfilled %>%
   select(plant_id, species_mix, plot, line, position, cohort,
          genus, species, genus_species,
-         planting_date, census_no, census_id, survey_date,
-         survival, height_apex, dbh_mean, dbase_mean) %>%
+         planting_date, first_survey, census_no, census_id, survey_date,
+         survival, height_apex, dbh_mm, dbase_mm) %>%
   distinct() %>%
-  filter(! if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na)) %>%
+  filter(! if_all(c(survival, dbh_mm, dbase_mm, height_apex), is.na)) %>%
   filter(! str_detect(plant_id, "NA")) %>%
   mutate(across(c(species_mix, plant_id, plot, cohort, genus_species,
                   line, position, census_no), as.factor))
