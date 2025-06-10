@@ -15,7 +15,6 @@ library("janitor")
 
 # Get data ----------------------------------------------------------------
 
-
 data_sbe <-
   read_csv(
     here::here("data", "raw", "SBE_compiled_data_2002-2024.csv")
@@ -29,7 +28,7 @@ data_sbe <-
 
   mutate(plot = ifelse(is.na(pl), NA,
                        formatC(pl,
-                               width = 2,
+                               width = 3,
                                format = "d",
                                flag = "0")),
          line = ifelse(is.na(li), NA,
@@ -193,7 +192,7 @@ keys <-
   left_join(plants_in_plots, by = c("plot_line"))
 
 # function to backfill missing trees as dead
-backfill_trees <- function(census_name, census, plot_no, site,
+backfill_trees <- function(census_name, census, plot_no,
                            tree_ids, data) {
   data %>%
     filter(census_id == census_name,
@@ -355,18 +354,31 @@ data_backfilled <-
   ))
 
 
+# Create treatment --------------------------------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  mutate(treatment = case_when(
+  plot %in% c("005", "011", "014", "022", "029", "032", "040", "046",
+              "049", "064", "115", "111", "100", "091", "085", "075") ~ "16-species-cut",
+  str_detect(species_mix, "4-species") ~ "4-species",
+  str_detect(species_mix, "16-species") ~ "16-species",
+  str_detect(species_mix, "monoculture") ~ "monoculture"
+))
+
 # Save --------------------------------------------------------------------
 
 data_backfilled <-
   data_backfilled %>%
-  select(plant_id, species_mix, plot, line, position, cohort,
+  select(plant_id, treatment, species_mix, plot, line, position, cohort,
          genus, species, genus_species,
          planting_date, first_survey, census_no, census_id, survey_date,
          survival, height_apex, dbh_mm, dbase_mm) %>%
   distinct() %>%
   filter(! if_all(c(survival, dbh_mm, dbase_mm, height_apex), is.na)) %>%
   filter(! str_detect(plant_id, "NA")) %>%
-  mutate(across(c(species_mix, plant_id, plot, cohort, genus_species,
+  filter(! is.na(genus_species)) %>%
+  mutate(across(c(treatment, species_mix, plant_id, plot, cohort, genus_species,
                   line, position, census_no), as.factor))
 
 saveRDS(data_backfilled,
