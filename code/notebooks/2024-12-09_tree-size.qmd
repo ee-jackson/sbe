@@ -68,13 +68,6 @@ new_census %>%
 
 ```{r}
 new_census %>% 
-  mutate(treatment = case_when(
-    plot %in% c("005", "011", "014", "022", "029", "032", "040", "046", 
-                "049", "064", "115", "111", "100", "091", "085", "075") ~ "16-species-cut",
-    str_detect(species_mix, "4-species") ~ "4-species",
-    str_detect(species_mix, "16-species") ~ "16-species",
-    str_detect(species_mix, "monoculture") ~ "monoculture"
-  )) %>% 
   ggplot(aes(x = dbh_mm)) +
   geom_density() +
   labs(x = "DBH /mm") +
@@ -92,16 +85,6 @@ new_census %>%
 ```{r}
 new_census %>% 
   filter(dbh_mm > 300) %>% 
-  group_by(plot, species_mix) %>% 
-  summarise(n_distinct(plant_id)) %>% 
-  arrange(`n_distinct(plant_id)`
-          |> desc() ) %>% 
-  knitr::kable()
-```
-
-```{r}
-new_census %>% 
-  filter(dbh_mm > 300) %>% 
   group_by(genus_species) %>% 
   summarise(n_distinct(plant_id)) %>% 
   arrange(`n_distinct(plant_id)`
@@ -111,13 +94,6 @@ new_census %>%
 
 ```{r}
 new_census %>% 
-  mutate(treatment = case_when(
-    plot %in% c("005", "011", "014", "022", "029", "032", "040", "046", 
-                "049", "064", "115", "111", "100", "091", "085", "075") ~ "16-species-cut",
-    str_detect(species_mix, "4-species") ~ "4-species",
-    str_detect(species_mix, "16-species") ~ "16-species",
-    str_detect(species_mix, "monoculture") ~ "monoculture"
-  )) %>% 
   filter(dbh_mm > 300) %>% 
   group_by(treatment) %>% 
   summarise(n_distinct(plant_id)) %>% 
@@ -172,6 +148,16 @@ new_census %>%
   geom_density() 
 ```
 
+```{r}
+new_census %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_mm,
+                                     a = a,
+                                     b = b,
+                                     c = c) ) %>% 
+  ggplot(aes(x = tree_height_m)) +
+  geom_histogram() 
+```
+
 By treatment:
 
 ```{r}
@@ -180,15 +166,30 @@ new_census %>%
                                      a = a,
                                      b = b,
                                      c = c) ) %>% 
-  mutate(treatment = case_when(
-    plot %in% c("005", "011", "014", "022", "029", "032", "040", "046", 
-                "049", "064", "115", "111", "100", "091", "085", "075") ~ "16-species-cut",
-    str_detect(species_mix, "4-species") ~ "4-species",
-    str_detect(species_mix, "16-species") ~ "16-species",
-    str_detect(species_mix, "monoculture") ~ "monoculture"
-  )) %>% 
   ggplot(aes(x = tree_height_m)) +
   geom_density() +
+  facet_wrap(~treatment)
+```
+
+```{r}
+new_census %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_mm,
+                                     a = a,
+                                     b = b,
+                                     c = c) ) %>% 
+  ggplot(aes(x = tree_height_m)) +
+  geom_histogram() +
+  facet_wrap(~treatment)
+```
+
+```{r}
+new_census %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_mm,
+                                     a = a,
+                                     b = b,
+                                     c = c) ) %>% 
+  ggplot(aes(x = tree_height_m)) +
+  geom_histogram() +
   facet_wrap(~treatment)
 ```
 
@@ -205,3 +206,16 @@ new_census %>%
   geom_density() +
   facet_wrap(~genus_species)
 ```
+
+```{r}
+new_census %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_mm,
+                                     a = a,
+                                     b = b,
+                                     c = c) ) %>% 
+  drop_na(genus_species) %>% 
+  ggplot(aes(x = tree_height_m)) +
+  geom_histogram() +
+  facet_wrap(~genus_species)
+```
+
