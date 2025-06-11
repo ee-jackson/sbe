@@ -110,6 +110,8 @@ predicted height = _a_\*(1 − exp(−_b_\*DBH^_c_^))
 
 Parameters _a, b_ and _c_ from [Feldpausch _et al._ 2012](https://doi.org/10.5194/bg-9-3381-2012) (Asia-specific model).
 
+_We think they use DBH in cm and height in m_
+
 ```{r}
 a <- 57.122	
 
@@ -127,7 +129,7 @@ get_height <- function(dbh, a, b, c) {
 }
 ```
 
-So for a tree with DBH of 50 mm, the predicted height is:
+So for a tree with DBH of 50 cm, the predicted height is:
 
 ```{r}
 get_height(dbh = 50,
@@ -140,7 +142,23 @@ Across the all the SBE planted trees:
 
 ```{r}
 new_census %>% 
-  mutate(tree_height_m = get_height(dbh = dbh_mm,
+  mutate(dbh_cm = dbh_mm / 10) %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_cm,
+                                     a = a,
+                                     b = b,
+                                     c = c) ) %>% 
+  summarise(
+    mean = mean(tree_height_m, na.rm = TRUE),
+    median = median(tree_height_m, na.rm = TRUE),
+    max = max(tree_height_m, na.rm = TRUE),
+    min = min(tree_height_m, na.rm = TRUE)
+  )
+```
+
+```{r}
+new_census %>% 
+  mutate(dbh_cm = dbh_mm / 10) %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_cm,
                                      a = a,
                                      b = b,
                                      c = c) ) %>% 
@@ -150,7 +168,8 @@ new_census %>%
 
 ```{r}
 new_census %>% 
-  mutate(tree_height_m = get_height(dbh = dbh_mm,
+  mutate(dbh_cm = dbh_mm / 10) %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_cm,
                                      a = a,
                                      b = b,
                                      c = c) ) %>% 
@@ -162,7 +181,8 @@ By treatment:
 
 ```{r}
 new_census %>% 
-  mutate(tree_height_m = get_height(dbh = dbh_mm,
+  mutate(dbh_cm = dbh_mm / 10) %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_cm,
                                      a = a,
                                      b = b,
                                      c = c) ) %>% 
@@ -173,7 +193,8 @@ new_census %>%
 
 ```{r}
 new_census %>% 
-  mutate(tree_height_m = get_height(dbh = dbh_mm,
+  mutate(dbh_cm = dbh_mm / 10) %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_cm,
                                      a = a,
                                      b = b,
                                      c = c) ) %>% 
@@ -184,7 +205,8 @@ new_census %>%
 
 ```{r}
 new_census %>% 
-  mutate(tree_height_m = get_height(dbh = dbh_mm,
+  mutate(dbh_cm = dbh_mm / 10) %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_cm,
                                      a = a,
                                      b = b,
                                      c = c) ) %>% 
@@ -197,7 +219,8 @@ By species:
 
 ```{r}
 new_census %>% 
-  mutate(tree_height_m = get_height(dbh = dbh_mm,
+  mutate(dbh_cm = dbh_mm / 10) %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_cm,
                                      a = a,
                                      b = b,
                                      c = c) ) %>% 
@@ -209,7 +232,8 @@ new_census %>%
 
 ```{r}
 new_census %>% 
-  mutate(tree_height_m = get_height(dbh = dbh_mm,
+  mutate(dbh_cm = dbh_mm / 10) %>% 
+  mutate(tree_height_m = get_height(dbh = dbh_cm,
                                      a = a,
                                      b = b,
                                      c = c) ) %>% 
