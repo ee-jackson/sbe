@@ -21,8 +21,6 @@ new_census <-
                             .default = dbh_mm)) # I think plot 1 is in cm
 ```
 
-Survival slightly better in plots with liana removal?
-
 ## Get wood density
 
 Wood density data from [Both et
