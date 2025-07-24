@@ -37,9 +37,7 @@ library("patchwork")
 ```{r}
 new_census <- 
   readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
-  filter(census_id == "full_measurement_03") %>% # most recent census
-  mutate(dbh_mm = case_when(plot == "001" ~ dbh_mm /10,
-                            .default = dbh_mm)) # I think plot 1 is in cm
+  filter(census_id == "full_measurement_03") # most recent census
 ```
 
 ## Get wood density

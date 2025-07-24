@@ -1,6 +1,6 @@
 # Estimate biomass
 eleanorjackson
-2025-07-22
+2025-07-24
 
 - [Get wood density](#get-wood-density)
 - [Estimate biomass](#estimate-biomass)
@@ -16,9 +16,7 @@ library("patchwork")
 ``` r
 new_census <- 
   readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
-  filter(census_id == "full_measurement_03") %>% # most recent census
-  mutate(dbh_mm = case_when(plot == "001" ~ dbh_mm /10,
-                            .default = dbh_mm)) # I think plot 1 is in cm
+  filter(census_id == "full_measurement_03") # most recent census
 ```
 
 ## Get wood density
@@ -177,7 +175,7 @@ plot_biomass %>%
     # A tibble: 1 × 1
       median
        <dbl>
-    1  0.267
+    1  0.270
 
 ``` r
 pos <- 
