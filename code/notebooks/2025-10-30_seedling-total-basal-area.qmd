@@ -1,0 +1,73 @@
+---
+title: "Estimate total basal area of seedlings from most recent census"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+
+```{r}
+#| output: FALSE
+
+library("tidyverse")
+library("here")
+library("patchwork")
+```
+
+```{r}
+new_census <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  filter(census_id == "full_measurement_03") # most recent census
+```
+
+Calculate basal area for each seedling using basal diameter measurements 
+
+```{r}
+seedling_ba <-
+  new_census %>% 
+  filter(survival == 1) %>% # only alive seedlings
+  mutate(dbase_m = dbase_mm / 1000) %>% 
+  mutate(basal_area = pi * (dbase_m/2)^2)
+```
+
+Summing basal area per treatment and calculating per ha
+
+```{r}
+seedling_ba %>% 
+  group_by(treatment) %>% 
+  summarise(sum_basal_area = sum(basal_area, na.rm = TRUE),
+            n_plots = n_distinct(plot)) %>% 
+  mutate(basal_area_per_ha = (sum_basal_area / n_plots)/4 ) %>% # 1 plot is 4ha
+  knitr::kable()
+```
+
+```{r}
+seedling_ba %>% 
+  mutate(treatment_simplified = 
+           case_when(treatment == "16-species-cut" ~ "lianas+planting",
+                     .default = "planting")) %>% 
+  group_by(treatment_simplified) %>% 
+  summarise(sum_basal_area = sum(basal_area, na.rm = TRUE),
+            n_plots = n_distinct(plot)) %>% 
+  mutate(basal_area_per_ha = (sum_basal_area / n_plots)/4 ) %>% # 1 plot is 4ha 
+  knitr::kable()
+```
