@@ -39,6 +39,61 @@ new_census <-
   filter(census_id == "full_measurement_03") # most recent census
 ```
 
+Number of seedlings:
+
+```{r}
+new_census %>% 
+  group_by(survival) %>% 
+  summarise(n_seedlings = n_distinct(plant_id))
+```
+
+14,577 seedlings alive and 40,504 dead across SBE.
+Note that seedlings which were never recorded as alive are not included here
+(i.e., they died between planting and the first census, so we have no size data for them).
+
+```{r}
+new_census %>% 
+  group_by(plot, treatment, survival) %>% 
+  summarise(n_seedlings = n_distinct(plant_id),
+            .groups = "drop") %>% 
+  pivot_wider(names_from = survival, values_from = n_seedlings) %>% 
+  rename(n_alive = `1`, n_dead = `0`) %>% 
+  mutate(total = n_dead + n_alive) %>% 
+  knitr::kable()
+```
+
+Mean and max seedling sizes:
+
+```{r}
+new_census %>% 
+  filter(survival == 1) %>% 
+  summarise(max_dbh = max(dbh_mm, na.rm = TRUE),
+            mean_dbh = mean(dbh_mm, na.rm = TRUE),
+            max_basal = max(dbase_mm, na.rm = TRUE),
+            mean_basal = mean(dbase_mm, na.rm = TRUE)) %>% 
+  knitr::kable()
+```
+
+Distribution of seedling sizes:
+
+```{r}
+new_census %>% 
+  filter(survival == 1) %>% 
+  ggplot(aes(x = dbh_mm)) +
+  geom_density() +
+  
+  new_census %>% 
+  filter(survival == 1) %>% 
+  ggplot(aes(x = dbase_mm)) +
+  geom_density()
+```
+
+```{r}
+new_census %>% 
+  filter(survival == 1) %>% # only alive seedlings
+  summarise(n_distinct(plant_id))
+```
+
 Calculate basal area for each seedling using basal diameter measurements 
 
 ```{r}
