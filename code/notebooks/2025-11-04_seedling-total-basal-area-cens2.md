@@ -192,7 +192,7 @@ new_census %>%
   geom_density()
 ```
 
-![](figures/2025-11-04_seedling-total-basal-area--cens2/unnamed-chunk-6-1.png)
+![](figures/2025-11-04_seedling-total-basal-area-cens2/unnamed-chunk-6-1.png)
 
 ``` r
 new_census %>% 
