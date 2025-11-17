@@ -1,0 +1,315 @@
+---
+title: "Summarise data"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+
+```{r}
+#| output: FALSE
+
+library("tidyverse")
+library("here")
+library("patchwork")
+```
+
+```{r}
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) 
+```
+
+```{r}
+glimpse(data)
+```
+
+# Size in the 2023-2024 census
+
+## By treatment
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  ggplot(aes(x = treatment, y = dbase_mm)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) 
+```
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  ggplot(aes(x = treatment, y = dbase_mm)) +
+  geom_boxplot(outlier.alpha = 0.5, outlier.shape = 16) +
+  facet_wrap(~genus_species, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+## monoculture vs mixture
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  mutate(mix = ifelse(treatment == "monoculture", 
+                      "monoculture", "mixture")) %>% 
+  ggplot(aes(x = mix, y = dbase_mm)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) 
+```
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  mutate(mix = ifelse(treatment == "monoculture", 
+                      "monoculture", "mixture")) %>% 
+  ggplot(aes(x = mix, y = dbase_mm)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  facet_wrap(~genus_species, scales = "free_y") 
+```
+
+## Liana cutting
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  mutate(lianas = ifelse(treatment == "16-species-cut", 
+                      "cut", "not")) %>% 
+  ggplot(aes(x = lianas, y = dbase_mm)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) 
+```
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  mutate(lianas = ifelse(treatment == "16-species-cut", 
+                      "cut", "not")) %>%
+  ggplot(aes(x = lianas, y = dbase_mm)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  facet_wrap(~genus_species, scales = "free_y") 
+```
+
+# Growth
+
+__Percentage increase in basal diameter relative to initial size__
+
+```{r}
+data_growth <- 
+  data %>% 
+  filter(str_detect(census_id, "full_measurement")) %>% 
+  select(!survey_date:dbh_mm & !census_no) %>% 
+  pivot_wider(names_from = census_id,
+              values_from = dbase_mm) %>% 
+  mutate(change = full_measurement_03 - full_measurement_01) %>% 
+  mutate(rgr = (change / full_measurement_01) *100)
+```
+
+## By treatment
+
+```{r}
+data_growth %>% 
+  ggplot(aes(x = treatment, y = rgr)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  ylab("Relative growth (%)")
+```
+
+```{r}
+data_growth %>% 
+  ggplot(aes(x = treatment, y = rgr)) +
+  geom_boxplot(outlier.alpha = 0.5, outlier.shape = 16) +
+  facet_wrap(~genus_species, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ylab("Relative growth (%)")
+```
+
+## monoculture vs mixture
+
+```{r}
+data_growth %>% 
+  mutate(mix = ifelse(treatment == "monoculture", 
+                      "monoculture", "mixture")) %>% 
+  ggplot(aes(x = mix, y = rgr)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  ylab("Relative growth (%)")
+```
+
+```{r}
+data_growth %>% 
+  mutate(mix = ifelse(treatment == "monoculture", 
+                      "monoculture", "mixture")) %>% 
+  ggplot(aes(x = mix, y = rgr)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  facet_wrap(~genus_species, scales = "free_y") +
+  ylab("Relative growth (%)")
+```
+
+
+## Liana cutting
+
+```{r}
+data_growth %>% 
+  mutate(lianas = ifelse(treatment == "16-species-cut", 
+                      "cut", "not")) %>% 
+  ggplot(aes(x = lianas, y = rgr)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  ylab("Relative growth (%)")
+```
+
+```{r}
+data_growth %>% 
+  mutate(lianas = ifelse(treatment == "16-species-cut", 
+                      "cut", "not")) %>%
+  ggplot(aes(x = lianas, y = rgr)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  facet_wrap(~genus_species, scales = "free_y") +
+  ylab("Relative growth (%)")
+```
+
+# Survival
+
+## By treatment
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  ggplot(aes(x = treatment, 
+             group = survival,
+             fill = survival)) +
+  geom_bar(position = "fill")
+```
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  ggplot(aes(x = treatment,
+             group = survival,
+             fill = survival)) +
+  geom_bar(position = "fill") +
+  facet_wrap(~genus_species, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+## monoculture vs mixture
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  mutate(mix = ifelse(treatment == "monoculture", 
+                      "monoculture", "mixture")) %>% 
+  ggplot(aes(x = mix, 
+             group = survival,
+             fill = survival)) +
+  geom_bar(position = "fill")
+```
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  mutate(mix = ifelse(treatment == "monoculture", 
+                      "monoculture", "mixture")) %>% 
+  ggplot(aes(x = mix, 
+             group = survival,
+             fill = survival)) +
+  geom_bar(position = "fill") +
+  facet_wrap(~genus_species, scales = "free_y") 
+```
+
+## Liana cutting
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  mutate(lianas = ifelse(treatment == "16-species-cut", 
+                      "cut", "not")) %>% 
+  ggplot(aes(x = lianas, 
+             group = survival,
+             fill = survival)) +
+  geom_bar(position = "fill") 
+```
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  mutate(lianas = ifelse(treatment == "16-species-cut", 
+                      "cut", "not")) %>%
+  ggplot(aes(x = lianas, 
+             group = survival,
+             fill = survival)) +
+  geom_bar(position = "fill") +
+  facet_wrap(~genus_species, scales = "free_y") 
+```
