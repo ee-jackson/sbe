@@ -328,7 +328,8 @@ data_backfilled <-
 
 # Clean survival ----------------------------------------------------------
 
-# remove left censored trees
+# remove left censored trees?
+
 left_censored <-
   data_backfilled %>%
   filter(survival == 0 &
@@ -339,9 +340,9 @@ left_censored <-
 paste(pull(count(left_censored), 1),
       "trees died before the first survey", sep = " ")
 
-data_backfilled <-
-  data_backfilled %>%
-  filter(!plant_id %in% left_censored$plant_id)
+# data_backfilled <-
+#   data_backfilled %>%
+#   filter(!plant_id %in% left_censored$plant_id)
 
 
 # Clean cohort ------------------------------------------------------------
