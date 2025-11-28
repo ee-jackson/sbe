@@ -1,13 +1,16 @@
 # The second decade of the Sabah biodiversity experiment
 eleanorjackson
-2025-11-25
+2025-11-28
 
 - [Calculate growth](#calculate-growth)
 - [Calculate survival](#calculate-survival)
-- [1) Life history trade off?](#1-life-history-trade-off)
-- [2) Spatial variation](#2-spatial-variation)
-- [3) Complementary species
-  interactions?](#3-complementary-species-interactions)
+- [Figure 1 - Life history trade
+  off?](#figure-1---life-history-trade-off)
+- [Figure 2 - Spatial variation](#figure-2---spatial-variation)
+- [Figure 3 - Complementary species
+  interactions?](#figure-3---complementary-species-interactions)
+- [Figure 4 - Monoculture seedling
+  densities](#figure-4---monoculture-seedling-densities)
 
 Have any results changed since [Tuck et
 al. (2016)](http://dx.doi.org/10.1098/rspb.2016.1451)?
@@ -28,6 +31,10 @@ al. (2016)](http://dx.doi.org/10.1098/rspb.2016.1451)?
 > here with the second cohort, which came from different stock.”
 
 5)  Any cohort effects?
+
+In this doc I’ll recreate the figures from [Tuck et
+al. (2016)](http://dx.doi.org/10.1098/rspb.2016.1451) to see if an extra
+decade has changed anything.
 
 ``` r
 library("tidyverse")
@@ -118,7 +125,7 @@ glimpse(data_gro_surv)
     $ growth_02_03   <dbl> -85.00000, 420.83333, 49.64539, NaN, 182.60870, NaN, Na…
     $ growth_01_03   <dbl> 56.38907, NA, 2223.78855, NA, 2551.70831, NA, NA, NA, N…
 
-# 1) Life history trade off?
+# Figure 1 - Life history trade off?
 
 ``` r
 data_gro_surv %>% 
@@ -207,7 +214,13 @@ data_gro_surv %>%
 
 ![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-9-1.png)
 
-# 2) Spatial variation
+> we found a clear life-history trade-off between survival and growth
+> and consistent differences among our 16 dipterocarps in their
+> positions along this trade-off during the two survey periods
+
+I think this finding still holds.
+
+# Figure 2 - Spatial variation
 
 > Spatial variation in species survival was quantified using predictions
 > from the random effect—a plot-level deviation from the average
@@ -264,8 +277,11 @@ spatial_surv_23 <-
   filter(n > 10) %>% 
   select(-n) %>% 
   left_join(sp_surv_23) %>% 
-  mutate(plot_effect = mean_survival_plot - mean_survival_sp)
+  mutate(plot_effect = mean_survival_plot - mean_survival_sp) %>% 
+  mutate(plot_cohort = paste0(plot, sep = "_", cohort))
 ```
+
+Plotting:
 
 ``` r
 spatial_surv_13 %>% 
@@ -273,6 +289,8 @@ spatial_surv_13 %>%
              y = genus_species,
              colour = plot)) +
   geom_point() +
+  geom_path(data = filter(spatial_surv_13, plot == "033"),
+            group = "plot") +
   theme(legend.position = "none") +
   geom_vline(xintercept = 0, linetype = 2) +
   labs(x = "relative effect of plot on survival",
@@ -285,12 +303,18 @@ Points represent the average survival of a species in a plot relative to
 the overall average of that species — so positive values show plots with
 better-than-average survival.
 
+> Species survival also responded to plot-level conditions in different
+> ways, so the most favourable location for one species could be one of
+> the least favourable for another (follow the red line in figure 2).
+
 ``` r
 spatial_surv_23 %>% 
   ggplot(aes(x = plot_effect,
              y = genus_species,
              colour = plot)) +
   geom_point() +
+  geom_path(data = filter(spatial_surv_23, plot == "033"),
+            group = "plot_cohort") +
   theme(legend.position = "none") +
   geom_vline(xintercept = 0, linetype = 2) +
   labs(x = "relative effect of plot on survival",
@@ -300,7 +324,9 @@ spatial_surv_23 %>%
 
 ![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-15-1.png)
 
-# 3) Complementary species interactions?
+Findings still hold true here.
+
+# Figure 3 - Complementary species interactions?
 
 ``` r
 data_gro_surv %>% 
@@ -342,7 +368,85 @@ data_gro_surv %>%
                width = 0.25,
                outlier.alpha = 0.5, 
                outlier.shape = 16) +
-  ylab("Increase in basal diameter between census 02 and 03 (%)")
+  ylab("Increase in basal diameter between census 02 and 03 (%)") +
+  facet_wrap(~cohort)
 ```
 
 ![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-18-1.png)
+
+> as expected, given the wide spacing of the planted seedlings, there is
+> no evidence of complementary species interactions in mixtures yet
+
+This seems to still be the case after 20 years.
+
+# Figure 4 - Monoculture seedling densities
+
+``` r
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  # remove 8 P.tomentella in the P.malaanonan monoculture
+  filter(!(plot == "070" & genus_species == "Parashorea_tomentella")) %>% 
+  filter(survival == 1) %>% 
+  mutate(sp_comp = case_when(
+    treatment == "monoculture" ~ genus_species,
+    .default = treatment
+  )) %>% 
+  group_by(plot, sp_comp) %>% 
+  summarise(n_trees_per_plot = n_distinct(plant_id)) %>% 
+  mutate(n_trees_per_ha = n_trees_per_plot / 4) %>% 
+  ggplot(aes(
+    x = n_trees_per_ha,
+    y = sp_comp
+  )) +
+  geom_point(shape = 16, alpha = 0.6) +
+  stat_summary(geom = "point", fun = "mean",
+               shape = 4, colour = "red", size = 3) +
+  ggtitle("Density of surviving seedlings in 16-species mixtures and monocultures")
+```
+
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-19-1.png)
+
+> The replicated monocultures of a given species were often more
+> variable than what we saw among the 16-species mixtures
+
+> The most extreme high and low seedling densities are found in
+> particular monocultures
+
+> After a decade, the lowest and highest seedling densities in the Sabah
+> biodiversity experiment plots were observed in monocultures consistent
+> with a potential insurance effect.
+
+These results still hold after 20 years.
+
+What if we look at basal area?
+
+``` r
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  # remove 8 P.tomentella in the P.malaanonan monoculture
+  filter(!(plot == "070" & genus_species == "Parashorea_tomentella")) %>% 
+  filter(survival == 1) %>% 
+  mutate(sp_comp = case_when(
+    treatment == "monoculture" ~ genus_species,
+    .default = treatment
+  )) %>% 
+  mutate(dbase_m = dbase_mm / 1000) %>% 
+  mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
+  group_by(plot, sp_comp) %>% 
+  summarise(sum_basal_area_m2 = sum(basal_area_m2, na.rm = TRUE)) %>% 
+  mutate(basal_area_per_ha = sum_basal_area_m2 / 4) %>% 
+  ggplot(aes(
+    x = basal_area_per_ha,
+    y = sp_comp
+  )) +
+  geom_point(shape = 16, alpha = 0.6) +
+  stat_summary(geom = "point", fun = "mean",
+               shape = 4, colour = "red", size = 3) +
+  labs(x = "Basal area per ha (m2)",
+    title = "Density of surviving seedlings in 16-species mixtures and monocultures")
+```
+
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-20-1.png)
+
+Less variation than when looking at density of surviving seedlings - at
+both plot and species level.
