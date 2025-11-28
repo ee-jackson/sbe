@@ -259,10 +259,10 @@ Plotting:
 spatial_surv_13 %>% 
   ggplot(aes(x = plot_effect,
              y = genus_species,
-             colour = plot)) +
+             colour = plot,
+             group = plot)) +
   geom_point() +
-  geom_path(data = filter(spatial_surv_13, plot == "033"),
-            group = "plot") +
+  geom_path(data = filter(spatial_surv_13, plot == "033")) +
   theme(legend.position = "none") +
   geom_vline(xintercept = 0, linetype = 2) +
   labs(x = "relative effect of plot on survival",
@@ -279,10 +279,10 @@ so positive values show plots with better-than-average survival.
 spatial_surv_23 %>% 
   ggplot(aes(x = plot_effect,
              y = genus_species,
-             colour = plot)) +
+             colour = plot,
+             group = plot_cohort)) +
   geom_point() +
-  geom_path(data = filter(spatial_surv_23, plot == "033"),
-            group = "plot_cohort") +
+  geom_path(data = filter(spatial_surv_23, plot == "033")) +
   theme(legend.position = "none") +
   geom_vline(xintercept = 0, linetype = 2) +
   labs(x = "relative effect of plot on survival",
