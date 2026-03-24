@@ -1,6 +1,6 @@
 # Additive partition of biodiversity effects
 eleanorjackson
-2026-03-11
+2026-03-16
 
 ``` r
 library("tidyverse")
@@ -60,6 +60,21 @@ data <-
   readRDS(here::here("data", "derived", "data_cleaned.rds")) 
 ```
 
+``` r
+data %>% 
+  select(treatment, plot) %>% 
+  group_by(treatment) %>% 
+  summarise(n_distinct(plot))
+```
+
+    # A tibble: 4 × 2
+      treatment      `n_distinct(plot)`
+      <fct>                       <int>
+    1 16-species                     32
+    2 16-species-cut                 16
+    3 4-species                      32
+    4 monoculture                    32
+
 Calculate basal area
 
 ``` r
@@ -69,39 +84,35 @@ data <-
   mutate(basal_area_m2 = pi * (dbase_m/2)^2)
 ```
 
-Calculate yield (summed BA) of each species in each treatment
+Calculate yield (summed BA) at the species x plot level
 
 ``` r
 data_yield <- 
   data %>% 
-  filter(str_detect(census_id, "full_measurement")) %>% 
   select(!survey_date:dbase_m & !census_no) %>% 
   pivot_wider(names_from = census_id,
               values_from = basal_area_m2) %>%
-  # summed basal area  of each species in each treatment
-  group_by(genus_species, treatment) %>%
-  summarise(ba_m2_cenus_01 = sum(full_measurement_01, na.rm = TRUE),
-            ba_m2_cenus_02 = sum(full_measurement_02, na.rm = TRUE),
-            ba_m2_cenus_03 = sum(full_measurement_03, na.rm = TRUE),
-            .groups = "drop") %>% 
-  # yield
-  mutate(yield = ba_m2_cenus_03 - ba_m2_cenus_01)
+  # summed basal area  of each species in each treatment and plot
+  group_by(genus_species, treatment, plot) %>%
+  summarise(Y_Oi = sum(full_measurement_03, na.rm = TRUE),
+            .groups = "drop") 
 ```
 
 We now have $M_i$ (yield of species $i$ in monoculture) and $Y_{O,i}$
-(observed yield of species $i$ in mixture):
+(observed yield of species $i$ in mixture). For $M_i$, I’m taking the
+mean across plots, so yield is at the plot level (4 ha).
 
 ``` r
-data_yield %>% 
-  select(genus_species, treatment, yield) %>% 
-  glimpse()
-```
+M_i <- 
+  data_yield %>% 
+  filter(treatment == "monoculture") %>% 
+  group_by(genus_species) %>% 
+  summarise(M_i = mean(Y_Oi))
 
-    Rows: 64
-    Columns: 3
-    $ genus_species <fct> Dipterocarpus_conformis, Dipterocarpus_conformis, Dipter…
-    $ treatment     <fct> 16-species, 16-species-cut, 4-species, monoculture, 16-s…
-    $ yield         <dbl> 0.2883357, 0.1505064, 0.5505712, 0.3003661, 0.6960972, 0…
+Y_Oi <- 
+  data_yield %>% 
+  filter(treatment == "16-species" | treatment == "4-species") 
+```
 
 The total observed yield of the mixture $Y_O$ is the summed observed
 yield of all species in mixture $∑_i Y_{O,i}$ :
@@ -111,39 +122,60 @@ Y_O <-
   data_yield %>% 
   filter(treatment == "16-species" |
            treatment == "4-species") %>% 
-  group_by(treatment) %>% 
-  summarise(total_obs_yield = sum(yield))
+  group_by(treatment, plot) %>% 
+  summarise(Y_O = sum(Y_Oi),
+            .groups = "drop")
 
 glimpse(Y_O)
 ```
 
-    Rows: 2
-    Columns: 2
-    $ treatment       <fct> 16-species, 4-species
-    $ total_obs_yield <dbl> 13.17627, 11.72055
+    Rows: 64
+    Columns: 3
+    $ treatment <fct> 16-species, 16-species, 16-species, 16-species, 16-species, …
+    $ plot      <fct> 003, 008, 015, 017, 021, 030, 031, 033, 038, 042, 045, 051, …
+    $ Y_O       <dbl> 0.98856651, 0.54944316, 0.74788496, 0.56512423, 1.09930576, …
+
+``` r
+Y_O %>% 
+  ggplot(aes(x = treatment, y = Y_O)) +
+  geom_boxplot() +
+  geom_jitter() +
+  ggtitle("Total observed yield")
+```
+
+![](figures/2026-03-10_additive-partitioning/unnamed-chunk-8-1.png)
 
 We can calculate observed relative yield of species $i$ in the mixture
-as $RY_{O,i} = Y_{O,i}/M_i$ :
+as $RY_{O,i} = Y_{O,i}/M_i$ (i.e., the observed yield of species $i$ in
+the mixture divided by the yield of species $i$ in monoculture).
 
 ``` r
 RY_Oi <- 
-  data_yield %>% 
-  select(genus_species, treatment, yield) %>% 
-  pivot_wider(names_from = treatment,
-              values_from = yield) %>% 
+  left_join(Y_Oi, M_i) %>% 
   # calculating separately for 16- and 4- species mix
-  mutate(obs_rel_yield_16 = `16-species` / monoculture,
-         obs_rel_yield_04 = `4-species` / monoculture) %>% 
-  select(genus_species, obs_rel_yield_04, obs_rel_yield_16)
+  mutate(RY_Oi = Y_Oi / M_i)
 
 glimpse(RY_Oi)
 ```
 
-    Rows: 16
-    Columns: 3
-    $ genus_species    <fct> Dipterocarpus_conformis, Dryobalanops_lanceolata, Hop…
-    $ obs_rel_yield_04 <dbl> 1.83300020, 2.10923383, 3.14507241, 2.07857754, 0.186…
-    $ obs_rel_yield_16 <dbl> 0.9599473, 1.1458336, 2.4294730, 0.8996051, 0.5999437…
+    Rows: 640
+    Columns: 6
+    $ genus_species <fct> Dipterocarpus_conformis, Dipterocarpus_conformis, Dipter…
+    $ treatment     <fct> 16-species, 16-species, 16-species, 16-species, 16-speci…
+    $ plot          <fct> 003, 008, 015, 017, 021, 030, 031, 033, 038, 042, 045, 0…
+    $ Y_Oi          <dbl> 0.0164505513, 0.0162587100, 0.0431581278, 0.0283140848, …
+    $ M_i           <dbl> 0.1573138, 0.1573138, 0.1573138, 0.1573138, 0.1573138, 0…
+    $ RY_Oi         <dbl> 0.104571569, 0.103352087, 0.274344186, 0.179984743, 0.06…
+
+``` r
+RY_Oi %>% 
+  ggplot(aes(y = genus_species, x = RY_Oi, 
+             colour = treatment)) +
+  geom_boxplot() +
+  ggtitle("Observed relative yield")
+```
+
+![](figures/2026-03-10_additive-partitioning/unnamed-chunk-10-1.png)
 
 The expected relative yield ($RY_{E,i}$) for each species in the
 4-species mix is 0.25 and 0.0625 for each species in the 16-species mix
@@ -156,56 +188,74 @@ multiplied by the yield of the species in monoculture):
 ``` r
 RY_Ei <- 
   data_yield %>% 
-  filter(treatment == "monoculture") %>% 
-  mutate(exp_yield_04 = yield * 0.25,
-         exp_yield_16 = yield * 0.0625) %>% 
-  select(genus_species, exp_yield_04, exp_yield_16)
+  filter(treatment == "16-species" |
+           treatment == "4-species") %>% 
+  select(genus_species, treatment, plot) %>% 
+  left_join(M_i) %>% 
+  mutate(exp_yield = case_when(
+    treatment == "4-species" ~ M_i * 0.25,
+    treatment == "16-species" ~ M_i * 0.0625)) 
 
 glimpse(RY_Ei)
 ```
 
-    Rows: 16
-    Columns: 3
-    $ genus_species <fct> Dipterocarpus_conformis, Dryobalanops_lanceolata, Hopea_…
-    $ exp_yield_04  <dbl> 0.07509153, 0.15187572, 0.05670068, 0.28153071, 0.269344…
-    $ exp_yield_16  <dbl> 0.018772883, 0.037968930, 0.014175170, 0.070382676, 0.06…
+    Rows: 640
+    Columns: 5
+    $ genus_species <fct> Dipterocarpus_conformis, Dipterocarpus_conformis, Dipter…
+    $ treatment     <fct> 16-species, 16-species, 16-species, 16-species, 16-speci…
+    $ plot          <fct> 003, 008, 015, 017, 021, 030, 031, 033, 038, 042, 045, 0…
+    $ M_i           <dbl> 0.1573138, 0.1573138, 0.1573138, 0.1573138, 0.1573138, 0…
+    $ exp_yield     <dbl> 0.009832113, 0.009832113, 0.009832113, 0.009832113, 0.00…
 
 and the total expected yield of the mixture ($Y_E$) is those values
 summed across species $∑_iY_{E,i}$ :
 
 ``` r
 Y_E <- 
-  data_yield %>% 
-  filter(treatment == "monoculture") %>% 
-  mutate(exp_yield_04 = yield * 0.25,
-         exp_yield_16 = yield * 0.0625) %>% 
-  summarise(`4-species` = sum(exp_yield_04),
-            `16-species` = sum(exp_yield_16)) %>% 
-  pivot_longer(cols = everything(),
-               names_to = "treatment",
-               values_to = "total_exp_yield")
+  RY_Oi %>% 
+  left_join(RY_Ei) %>% 
+  group_by(plot, treatment) %>% 
+  summarise(total_exp_yield = sum(exp_yield),
+            .groups = "drop")
 
 glimpse(Y_E)
 ```
 
-    Rows: 2
-    Columns: 2
-    $ treatment       <chr> "4-species", "16-species"
-    $ total_exp_yield <dbl> 4.027028, 1.006757
+    Rows: 64
+    Columns: 3
+    $ plot            <fct> 001, 003, 006, 008, 009, 012, 015, 016, 017, 019, 021,…
+    $ treatment       <fct> 4-species, 16-species, 4-species, 16-species, 4-specie…
+    $ total_exp_yield <dbl> 0.5232393, 0.5285926, 0.2992643, 0.5285926, 0.6597348,…
 
 So now we can calculate $𝚫Y$, the deviation from total expected relative
 yield in the mixture as: $Y_{O} - Y_{E}$
 
 ``` r
-full_join(Y_E, Y_O) %>% 
-  mutate(DY = total_obs_yield - total_exp_yield)
+DY <- 
+  full_join(Y_E, Y_O) %>% 
+  mutate(DY = Y_O - total_exp_yield) 
+
+glimpse(DY)
 ```
 
-    # A tibble: 2 × 4
-      treatment  total_exp_yield total_obs_yield    DY
-      <chr>                <dbl>           <dbl> <dbl>
-    1 4-species             4.03            11.7  7.69
-    2 16-species            1.01            13.2 12.2 
+    Rows: 64
+    Columns: 5
+    $ plot            <fct> 001, 003, 006, 008, 009, 012, 015, 016, 017, 019, 021,…
+    $ treatment       <fct> 4-species, 16-species, 4-species, 16-species, 4-specie…
+    $ total_exp_yield <dbl> 0.5232393, 0.5285926, 0.2992643, 0.5285926, 0.6597348,…
+    $ Y_O             <dbl> 4.68097845, 0.98856651, 0.57690869, 0.54944316, 0.5121…
+    $ DY              <dbl> 4.157739144, 0.459973894, 0.277644347, 0.020850549, -0…
+
+``` r
+DY %>% 
+  ggplot(aes(x = treatment, y = DY)) +
+  geom_boxplot() +
+  geom_jitter() +
+  ggtitle("The net biodiversity effect 
+          (deviation from total expected yield in the mixture)")
+```
+
+![](figures/2026-03-10_additive-partitioning/unnamed-chunk-14-1.png)
 
 and $𝚫RY_i$, the deviation from expected relative yield of species $i$
 in the mixture as: $RY_{O,i} - RY_{E,i}$
@@ -213,18 +263,31 @@ in the mixture as: $RY_{O,i} - RY_{E,i}$
 ``` r
 DRY_i <- 
   full_join(RY_Ei, RY_Oi) %>% 
-  mutate(DRY_i_04 = obs_rel_yield_04 - exp_yield_04,
-         DRY_i_16 = obs_rel_yield_16 - exp_yield_16) %>% 
-  select(genus_species, DRY_i_04, DRY_i_16)
+  mutate(DRY_i = RY_Oi - exp_yield) 
 
 glimpse(DRY_i)
 ```
 
-    Rows: 16
-    Columns: 3
-    $ genus_species <fct> Dipterocarpus_conformis, Dryobalanops_lanceolata, Hopea_…
-    $ DRY_i_04      <dbl> 1.75790866, 1.95735811, 3.08837173, 1.79704683, -0.08295…
-    $ DRY_i_16      <dbl> 0.9411744, 1.1078647, 2.4152978, 0.8292224, 0.5326077, 1…
+    Rows: 640
+    Columns: 8
+    $ genus_species <fct> Dipterocarpus_conformis, Dipterocarpus_conformis, Dipter…
+    $ treatment     <fct> 16-species, 16-species, 16-species, 16-species, 16-speci…
+    $ plot          <fct> 003, 008, 015, 017, 021, 030, 031, 033, 038, 042, 045, 0…
+    $ M_i           <dbl> 0.1573138, 0.1573138, 0.1573138, 0.1573138, 0.1573138, 0…
+    $ exp_yield     <dbl> 0.009832113, 0.009832113, 0.009832113, 0.009832113, 0.00…
+    $ Y_Oi          <dbl> 0.0164505513, 0.0162587100, 0.0431581278, 0.0283140848, …
+    $ RY_Oi         <dbl> 0.104571569, 0.103352087, 0.274344186, 0.179984743, 0.06…
+    $ DRY_i         <dbl> 0.094739456, 0.093519974, 0.264512073, 0.170152631, 0.05…
+
+``` r
+DRY_i %>% 
+  ggplot(aes(y = genus_species, x = DRY_i, 
+             colour = treatment)) +
+  geom_boxplot() +
+  ggtitle("Deviation from expected relative yield of species i in the mixture")
+```
+
+![](figures/2026-03-10_additive-partitioning/unnamed-chunk-16-1.png)
 
 The complementarity effect is $N\overline{𝚫RY} \overline{M}$, the number
 of species in the mixture ($N$) multiplied by the mean $𝚫RY_i$ and mean
@@ -232,56 +295,101 @@ $M_i$ across species.
 
 ``` r
 M_i_mean <-
-  data_yield %>% 
-  filter(treatment == "monoculture") %>% 
-  summarise(mean(yield)) %>% 
+  M_i %>% 
+  summarise(mean(M_i)) %>% 
   pluck(1,1)
 
-complementarity_effect <-
+complementarity_effects <-
   DRY_i %>% 
-  summarise(DRY_mean_04 = mean(DRY_i_04),
-            DRY_mean_16 = mean(DRY_i_16)) %>% 
-  mutate(`4-species` = 4 * DRY_mean_04 * M_i_mean,
-         `16-species` = 16 * DRY_mean_16 * M_i_mean) %>% 
-  pivot_longer(cols = c(`4-species`, `16-species`),
-               names_to = "treatment",
-               values_to = "complementarity_effect") %>% 
-  select(treatment, complementarity_effect)
+  group_by(plot, treatment) %>% 
+  summarise(mean_DRY_i = mean(DRY_i),
+            .groups = "drop") %>% 
+  mutate(complementarity_effect = mean_DRY_i * M_i_mean) %>% 
+  select(plot, treatment, complementarity_effect)
 
-complementarity_effect
+glimpse(complementarity_effects)
 ```
 
-    # A tibble: 2 × 2
-      treatment  complementarity_effect
-      <chr>                       <dbl>
-    1 4-species                    2.80
-    2 16-species                  18.2 
+    Rows: 64
+    Columns: 3
+    $ plot                   <fct> 001, 003, 006, 008, 009, 012, 015, 016, 017, 01…
+    $ treatment              <fct> 4-species, 16-species, 4-species, 16-species, 4…
+    $ complementarity_effect <dbl> 0.884077948, 0.054961207, 0.332498965, 0.027027…
 
 and the selection effect $N cov(𝚫RY,M)$
 
 ``` r
-M_i <- 
-  data_yield %>% 
-  filter(treatment == "monoculture") %>% 
-  select(genus_species, yield)
-
-selection_effect_04 <- 
-  cov(x = DRY_i$DRY_i_04, y = M_i$yield) * 4
-
-selection_effect_16 <- 
-  cov(x = DRY_i$DRY_i_16, y = M_i$yield) * 16
-
-selection_effect <-
+get_selection_effect <- function(plot, treatment, N, DRY_i_data, M_i_data) {
+  DRY_i_data <- 
+    DRY_i_data %>% 
+    filter(treatment == !!treatment) %>% 
+    filter(plot == !!plot) %>% 
+    select(genus_species, DRY_i)
+  
+  M_i_data <- 
+    M_i_data %>% 
+    filter(genus_species %in% DRY_i_data$genus_species)
+  
+  selection_effect <- cov(x = DRY_i_data$DRY_i, y = M_i_data$M_i) * N
+  
   tibble(
-    treatment = c("4-species", "16-species"),
-    selection_effect = c(selection_effect_04, selection_effect_16)
+    plot = !!plot,
+    treatment = !!treatment,
+    selection_effect = selection_effect
   )
+}
 
-selection_effect
+keys <- 
+  DRY_i %>% 
+  select(plot, treatment) %>% 
+  distinct() %>% 
+  mutate(N = as.numeric(str_extract(treatment, ".*(?=-)")))
+
+selection_effects <- 
+  purrr::pmap(
+  .l = list(plot = keys$plot,
+            treatment = keys$treatment,
+            N = keys$N),
+  .f = get_selection_effect,
+  DRY_i_data = DRY_i,
+  M_i_data = M_i) %>%
+  list_rbind()
+
+glimpse(selection_effects)
 ```
 
-    # A tibble: 2 × 2
-      treatment  selection_effect
-      <chr>                 <dbl>
-    1 4-species             -1.58
-    2 16-species            -7.03
+    Rows: 64
+    Columns: 3
+    $ plot             <fct> 003, 008, 015, 017, 021, 030, 031, 033, 038, 042, 045…
+    $ treatment        <fct> 16-species, 16-species, 16-species, 16-species, 16-sp…
+    $ selection_effect <dbl> -0.35999313, -0.35165074, -0.69848255, -0.41912052, -…
+
+``` r
+complementarity_effects %>% 
+  ggplot(aes(x = treatment,
+             y = complementarity_effect)) +
+  geom_jitter(width = 0.25) +
+  
+  selection_effects %>% 
+  ggplot(aes(x = treatment,
+             y = selection_effect)) +
+  geom_jitter(width = 0.25)
+```
+
+![](figures/2026-03-10_additive-partitioning/unnamed-chunk-19-1.png)
+
+``` r
+DY %>% 
+  left_join(complementarity_effects) %>% 
+  left_join(selection_effects) %>% glimpse
+```
+
+    Rows: 64
+    Columns: 7
+    $ plot                   <fct> 001, 003, 006, 008, 009, 012, 015, 016, 017, 01…
+    $ treatment              <fct> 4-species, 16-species, 4-species, 16-species, 4…
+    $ total_exp_yield        <dbl> 0.5232393, 0.5285926, 0.2992643, 0.5285926, 0.6…
+    $ Y_O                    <dbl> 4.68097845, 0.98856651, 0.57690869, 0.54944316,…
+    $ DY                     <dbl> 4.157739144, 0.459973894, 0.277644347, 0.020850…
+    $ complementarity_effect <dbl> 0.884077948, 0.054961207, 0.332498965, 0.027027…
+    $ selection_effect       <dbl> 1.062524644, -0.359993131, -0.396823228, -0.351…

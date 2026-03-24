@@ -61,12 +61,18 @@ $$
 𝚫Y = Y_O - Y_E = ∑_i RY_{O,i} M_i - ∑_i RY_{E,i} M_i = ∑_i 𝚫RY_iM_i = N\overline{𝚫RY} \overline{M} + N cov(𝚫RY,M)
 $$
 
-$N\overline{𝚫RY} \overline{M}$ is the complementarity effect and 
-$N cov(𝚫RY,M)$ is the selection effect.
+$N\overline{𝚫RY} \overline{M}$ is the complementarity effect and $N cov(𝚫RY,M)$ is the selection effect.
 
 ```{r}
 data <- 
   readRDS(here::here("data", "derived", "data_cleaned.rds")) 
+```
+
+```{r}
+data %>% 
+  select(treatment, plot) %>% 
+  group_by(treatment) %>% 
+  summarise(n_distinct(plot))
 ```
 
 Calculate basal area
@@ -78,168 +84,225 @@ data <-
   mutate(basal_area_m2 = pi * (dbase_m/2)^2)
 ```
 
-Calculate yield (summed BA)  of each species in each treatment
+Calculate yield (summed BA) at the species x plot level
 
 ```{r}
 data_yield <- 
   data %>% 
-  filter(str_detect(census_id, "full_measurement")) %>% 
   select(!survey_date:dbase_m & !census_no) %>% 
   pivot_wider(names_from = census_id,
               values_from = basal_area_m2) %>%
-  # summed basal area  of each species in each treatment
-  group_by(genus_species, treatment) %>%
-  summarise(ba_m2_cenus_01 = sum(full_measurement_01, na.rm = TRUE),
-            ba_m2_cenus_02 = sum(full_measurement_02, na.rm = TRUE),
-            ba_m2_cenus_03 = sum(full_measurement_03, na.rm = TRUE),
-            .groups = "drop") %>% 
-  # yield
-  mutate(yield = ba_m2_cenus_03 - ba_m2_cenus_01)
+  # summed basal area  of each species in each treatment and plot
+  group_by(genus_species, treatment, plot) %>%
+  summarise(Y_Oi = sum(full_measurement_03, na.rm = TRUE),
+            .groups = "drop") 
 ```
 
-We now have $M_i$ (yield of species $i$ in monoculture) and 
-$Y_{O,i}$ (observed yield of species $i$ in mixture):
+We now have $M_i$ (yield of species $i$ in monoculture) and $Y_{O,i}$ (observed yield of species $i$ in mixture). 
+For $M_i$, I'm taking the mean across plots, so yield is at the plot level (4 ha).
 
 ```{r}
-data_yield %>% 
-  select(genus_species, treatment, yield) %>% 
-  glimpse()
+M_i <- 
+  data_yield %>% 
+  filter(treatment == "monoculture") %>% 
+  group_by(genus_species) %>% 
+  summarise(M_i = mean(Y_Oi))
+
+Y_Oi <- 
+  data_yield %>% 
+  filter(treatment == "16-species" | treatment == "4-species") 
 ```
 
-The total observed yield of the mixture $Y_O$ is 
-the summed observed yield of all species in mixture $∑_i Y_{O,i}$ :
+The total observed yield of the mixture $Y_O$ is the summed observed yield of all species in mixture $∑_i Y_{O,i}$ :
 
 ```{r}
 Y_O <- 
   data_yield %>% 
   filter(treatment == "16-species" |
            treatment == "4-species") %>% 
-  group_by(treatment) %>% 
-  summarise(total_obs_yield = sum(yield))
+  group_by(treatment, plot) %>% 
+  summarise(Y_O = sum(Y_Oi),
+            .groups = "drop")
 
 glimpse(Y_O)
 ```
 
-We can calculate observed relative yield of species $i$ in the mixture
-as $RY_{O,i} = Y_{O,i}/M_i$ :
+```{r}
+Y_O %>% 
+  ggplot(aes(x = treatment, y = Y_O)) +
+  geom_boxplot() +
+  geom_jitter() +
+  ggtitle("Total observed yield")
+```
+
+We can calculate observed relative yield of species $i$ in the mixture 
+as $RY_{O,i} = Y_{O,i}/M_i$ 
+(i.e., the observed yield of species $i$ in the mixture divided by 
+the yield of species $i$ in monoculture).
 
 ```{r}
 RY_Oi <- 
-  data_yield %>% 
-  select(genus_species, treatment, yield) %>% 
-  pivot_wider(names_from = treatment,
-              values_from = yield) %>% 
+  left_join(Y_Oi, M_i) %>% 
   # calculating separately for 16- and 4- species mix
-  mutate(obs_rel_yield_16 = `16-species` / monoculture,
-         obs_rel_yield_04 = `4-species` / monoculture) %>% 
-  select(genus_species, obs_rel_yield_04, obs_rel_yield_16)
+  mutate(RY_Oi = Y_Oi / M_i)
 
 glimpse(RY_Oi)
 ```
+```{r}
+RY_Oi %>% 
+  ggplot(aes(y = genus_species, x = RY_Oi, 
+             colour = treatment)) +
+  geom_boxplot() +
+  ggtitle("Observed relative yield")
+```
 
-The expected relative yield ($RY_{E,i}$) for each species in the 4-species mix 
-is 0.25 and 0.0625 for each species in the 16-species mix (i.e., 1/4 and 1/16).
+The expected relative yield ($RY_{E,i}$) for each species in the 4-species mix is 0.25 and 0.0625 for each species in the 16-species mix (i.e., 1/4 and 1/16).
 
-To calculate the expected yield of species $i$ in the mixture ($Y_{E,i}$)
-we can do $RY_{E,i}M_i$ 
-(the expected relative yield multiplied by the yield of the species in monoculture):
+To calculate the expected yield of species $i$ in the mixture ($Y_{E,i}$) we can do $RY_{E,i}M_i$ (the expected relative yield multiplied by the yield of the species in monoculture):
 
 ```{r}
 RY_Ei <- 
   data_yield %>% 
-  filter(treatment == "monoculture") %>% 
-  mutate(exp_yield_04 = yield * 0.25,
-         exp_yield_16 = yield * 0.0625) %>% 
-  select(genus_species, exp_yield_04, exp_yield_16)
+  filter(treatment == "16-species" |
+           treatment == "4-species") %>% 
+  select(genus_species, treatment, plot) %>% 
+  left_join(M_i) %>% 
+  mutate(exp_yield = case_when(
+    treatment == "4-species" ~ M_i * 0.25,
+    treatment == "16-species" ~ M_i * 0.0625)) 
 
 glimpse(RY_Ei)
 ```
 
-and the total expected yield of the mixture ($Y_E$) 
-is those values summed across species $∑_iY_{E,i}$ :
+and the total expected yield of the mixture ($Y_E$) is those values summed across species $∑_iY_{E,i}$ :
 
 ```{r}
 Y_E <- 
-  data_yield %>% 
-  filter(treatment == "monoculture") %>% 
-  mutate(exp_yield_04 = yield * 0.25,
-         exp_yield_16 = yield * 0.0625) %>% 
-  summarise(`4-species` = sum(exp_yield_04),
-            `16-species` = sum(exp_yield_16)) %>% 
-  pivot_longer(cols = everything(),
-               names_to = "treatment",
-               values_to = "total_exp_yield")
+  RY_Oi %>% 
+  left_join(RY_Ei) %>% 
+  group_by(plot, treatment) %>% 
+  summarise(total_exp_yield = sum(exp_yield),
+            .groups = "drop")
 
 glimpse(Y_E)
 ```
 
-So now we can calculate $𝚫Y$, the deviation from total expected relative yield 
-in the mixture as: $Y_{O} - Y_{E}$
+So now we can calculate $𝚫Y$, the deviation from total expected relative yield in the mixture as: $Y_{O} - Y_{E}$
 
 ```{r}
-full_join(Y_E, Y_O) %>% 
-  mutate(DY = total_obs_yield - total_exp_yield)
+DY <- 
+  full_join(Y_E, Y_O) %>% 
+  mutate(DY = Y_O - total_exp_yield) 
+
+glimpse(DY)
 ```
 
-and $𝚫RY_i$, the deviation from expected relative yield of species $i$
-in the mixture as: $RY_{O,i} - RY_{E,i}$
+```{r}
+DY %>% 
+  ggplot(aes(x = treatment, y = DY)) +
+  geom_boxplot() +
+  geom_jitter() +
+  ggtitle("The net biodiversity effect 
+          (deviation from total expected yield in the mixture)")
+```
+
+
+and $𝚫RY_i$, the deviation from expected relative yield of species $i$ in the mixture as: $RY_{O,i} - RY_{E,i}$
 
 ```{r}
 DRY_i <- 
   full_join(RY_Ei, RY_Oi) %>% 
-  mutate(DRY_i_04 = obs_rel_yield_04 - exp_yield_04,
-         DRY_i_16 = obs_rel_yield_16 - exp_yield_16) %>% 
-  select(genus_species, DRY_i_04, DRY_i_16)
+  mutate(DRY_i = RY_Oi - exp_yield) 
 
 glimpse(DRY_i)
 ```
 
-The complementarity effect is $N\overline{𝚫RY} \overline{M}$,
-the number of species in the mixture ($N$) multiplied by the 
-mean $𝚫RY_i$ and mean $M_i$ across species.
+```{r}
+DRY_i %>% 
+  ggplot(aes(y = genus_species, x = DRY_i, 
+             colour = treatment)) +
+  geom_boxplot() +
+  ggtitle("Deviation from expected relative yield of species i in the mixture")
+```
+
+The complementarity effect is $N\overline{𝚫RY} \overline{M}$, the number of species in the mixture ($N$) multiplied by the mean $𝚫RY_i$ and mean $M_i$ across species.
 
 ```{r}
 M_i_mean <-
-  data_yield %>% 
-  filter(treatment == "monoculture") %>% 
-  summarise(mean(yield)) %>% 
+  M_i %>% 
+  summarise(mean(M_i)) %>% 
   pluck(1,1)
 
-complementarity_effect <-
+complementarity_effects <-
   DRY_i %>% 
-  summarise(DRY_mean_04 = mean(DRY_i_04),
-            DRY_mean_16 = mean(DRY_i_16)) %>% 
-  mutate(`4-species` = 4 * DRY_mean_04 * M_i_mean,
-         `16-species` = 16 * DRY_mean_16 * M_i_mean) %>% 
-  pivot_longer(cols = c(`4-species`, `16-species`),
-               names_to = "treatment",
-               values_to = "complementarity_effect") %>% 
-  select(treatment, complementarity_effect)
+  group_by(plot, treatment) %>% 
+  summarise(mean_DRY_i = mean(DRY_i),
+            .groups = "drop") %>% 
+  mutate(complementarity_effect = mean_DRY_i * M_i_mean) %>% 
+  select(plot, treatment, complementarity_effect)
 
-complementarity_effect
+glimpse(complementarity_effects)
+```
+
+and the selection effect $N cov(𝚫RY,M)$
+
+```{r}
+
+get_selection_effect <- function(plot, treatment, N, DRY_i_data, M_i_data) {
+  DRY_i_data <- 
+    DRY_i_data %>% 
+    filter(treatment == !!treatment) %>% 
+    filter(plot == !!plot) %>% 
+    select(genus_species, DRY_i)
+  
+  M_i_data <- 
+    M_i_data %>% 
+    filter(genus_species %in% DRY_i_data$genus_species)
+  
+  selection_effect <- cov(x = DRY_i_data$DRY_i, y = M_i_data$M_i) * N
+  
+  tibble(
+    plot = !!plot,
+    treatment = !!treatment,
+    selection_effect = selection_effect
+  )
+}
+
+keys <- 
+  DRY_i %>% 
+  select(plot, treatment) %>% 
+  distinct() %>% 
+  mutate(N = as.numeric(str_extract(treatment, ".*(?=-)")))
+
+selection_effects <- 
+  purrr::pmap(
+  .l = list(plot = keys$plot,
+            treatment = keys$treatment,
+            N = keys$N),
+  .f = get_selection_effect,
+  DRY_i_data = DRY_i,
+  M_i_data = M_i) %>%
+  list_rbind()
+
+glimpse(selection_effects)
 ```
 
 
-and the selection effect $N cov(𝚫RY,M)$ 
+```{r}
+complementarity_effects %>% 
+  ggplot(aes(x = treatment,
+             y = complementarity_effect)) +
+  geom_jitter(width = 0.25) +
+  
+  selection_effects %>% 
+  ggplot(aes(x = treatment,
+             y = selection_effect)) +
+  geom_jitter(width = 0.25)
+```
 
 ```{r}
-M_i <- 
-  data_yield %>% 
-  filter(treatment == "monoculture") %>% 
-  select(genus_species, yield)
-
-selection_effect_04 <- 
-  cov(x = DRY_i$DRY_i_04, y = M_i$yield) * 4
-
-selection_effect_16 <- 
-  cov(x = DRY_i$DRY_i_16, y = M_i$yield) * 16
-
-selection_effect <-
-  tibble(
-    treatment = c("4-species", "16-species"),
-    selection_effect = c(selection_effect_04, selection_effect_16)
-  )
-
-selection_effect
+DY %>% 
+  left_join(complementarity_effects) %>% 
+  left_join(selection_effects) %>% glimpse
 ```
 
