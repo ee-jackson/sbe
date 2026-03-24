@@ -63,8 +63,11 @@ data_sbe <-
     is.na(position) ~ paste(plant_id, species, sep = "_"),
     .default = plant_id
   )) %>%
-  # Making cols match the primary forest data
-  select(plant_id, plot, species_mix, line, position, old_new,
+  mutate(cohort = case_when(
+    old_new == "O" ~ 1,
+    old_new == "N" ~ 2
+  )) %>%
+  select(plant_id, plot, species_mix, line, position, cohort,
          genus, species, genus_species,
          planting_date, census_id, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
@@ -127,7 +130,9 @@ data_sbe <-
     census_id == "intensive_10" ~ "25",
     census_id == "full_measurement_03" ~ "26",
     .default = census_id
-  ))
+  )) %>%
+  # we only want full censuses
+  filter(str_detect(census_id, "full_measurement"))
 
 
 # Clean survey date -------------------------------------------------------
@@ -167,7 +172,6 @@ data_sbe <-
 
 
 # Backfill dead plants ----------------------------------------------------
-
 
 # concatenate plot and line as not complete cases in each census
 data_sbe <-
@@ -230,7 +234,7 @@ data_backfilled <-
 data_backfilled <-
   data_backfilled %>%
   filter(!
-           (old_new == "N" &
+           (cohort == 2 &
               census_no %in% c("01", "02", "03", "04", "05") )
   )
 
@@ -326,32 +330,72 @@ data_backfilled <-
 #          days_num = as.numeric(days))
 
 
-# Clean survival ----------------------------------------------------------
-
-# remove left censored trees?
-
-left_censored <-
-  data_backfilled %>%
-  filter(survival == 0 &
-             first_survey == survey_date) %>%
-  select(plant_id) %>%
-  distinct()
-
-paste(pull(count(left_censored), 1),
-      "trees died before the first survey", sep = " ")
-
-# data_backfilled <-
-#   data_backfilled %>%
-#   filter(!plant_id %in% left_censored$plant_id)
-
-
-# Clean cohort ------------------------------------------------------------
+# Add col indicating whether climber cut ----------------------------------
 
 data_backfilled <-
   data_backfilled %>%
-  mutate(cohort = case_when(
-    old_new == "O" ~ 1,
-    old_new == "N" ~ 2
+  mutate(climber_cut = case_when(
+    plot == "05" |
+      plot == "11" |
+      plot == "14" ~ 1,
+    .default  = 0
+  ))
+
+
+# Predict missing basal diameter ------------------------------------------
+
+n_missing_base <-
+  data_backfilled %>%
+  filter(is.na(dbase_mm) & !is.na(dbh_mm)) %>%
+  nrow()
+
+paste(
+  round(n_missing_base /
+          nrow(filter(data_backfilled, survival == 1))
+        * 100, digits = 2),
+  "% trees are missing basal diameter",
+  sep = " "
+)
+
+# Taper model 1 from Cushman et al. 2014, doi: 10.1111/2041-210X.12187
+get_basal <- function(dbh, pom, b1) {
+  dbh /
+    exp(b1 * (pom - 1))
+}
+
+# Choose b1 parameter which minimises RMSE in basal diameter for our data
+get_rmse <- function(df, b1){
+
+  # make predictions for basal diameter
+  predictions <-
+    with(df, get_basal(dbh = dbh_mm, pom = 1.3, b1))
+
+  # get model errors
+  errors <-
+    with(df, dbase_mm - predictions)
+
+  # return the rmse
+  return( sqrt( sum(errors^2, na.rm = TRUE) / (length(errors)) ) )
+
+}
+
+optimiser_results <-
+  optim(
+    method = "Brent",
+    par = c(0),
+    lower = -5,
+    upper = 5,
+    fn = function(x) {
+      get_rmse(df = data_backfilled, x[1])
+    }
+  )
+
+data_backfilled <-
+  data_backfilled %>%
+  mutate(dbase_mm = case_when(
+    is.na(dbase_mm) & !is.na(dbh_mm) ~
+      get_basal(dbh = dbh_mm, pom = 1.3, b1 = optimiser_results$par),
+    .default = dbase_mm
   ))
 
 
@@ -364,8 +408,49 @@ data_backfilled <-
               "049", "064", "115", "111", "100", "091", "085", "075") ~ "16-species-cut",
   str_detect(species_mix, "4-species") ~ "4-species",
   str_detect(species_mix, "16-species") ~ "16-species",
-  str_detect(species_mix, "monoculture") ~ "monoculture"
-))
+  str_detect(species_mix, "monoculture") ~ "monoculture"))
+
+
+# Remove mis-planted species ----------------------------------------------
+
+# sometimes the wrong species has been planted
+# removing these individuals since would affect our diversity analyses
+
+# getting lists of species which *should* be present in each plot
+pl_sp_1 <-
+  data_backfilled %>%
+  filter(treatment == "monoculture") %>%
+  group_by(plot, genus_species) %>%
+  summarise(n = n_distinct(plant_id),
+            .groups = "drop_last") %>%
+  slice_max(n = 1, order_by = n) %>%
+  select(-n)
+
+pl_sp_4 <-
+  data_backfilled %>%
+  filter(treatment == "4-species") %>%
+  group_by(plot, genus_species) %>%
+  summarise(n = n_distinct(plant_id),
+            .groups = "drop_last") %>%
+  slice_max(n = 4, order_by = n) %>%
+  select(-n)
+
+pl_sp_16 <-
+  data_backfilled %>%
+  filter(treatment == "16-species" | treatment == "16-species-cut") %>%
+  group_by(plot, genus_species) %>%
+  summarise(n = n_distinct(plant_id),
+            .groups = "drop_last") %>%
+  slice_max(n = 16, order_by = n) %>%
+  select(-n)
+
+sp_lists <- bind_rows(pl_sp_1, pl_sp_4, pl_sp_16)
+
+# removing species which are not in the list for each plot
+data_backfilled <-
+  inner_join(x = data_backfilled,
+           y = sp_lists)
+
 
 # Save --------------------------------------------------------------------
 
