@@ -54,6 +54,10 @@ library("densize")
 ```{r}
 data <- 
   readRDS(here::here("data", "derived", "data_cleaned.rds")) 
+
+taxa <- 
+  read_csv(here::here("data", "derived", "taxonomy.csv")) %>% 
+  mutate(genus_species.ORIG = str_replace(genus_species.ORIG, " ", "_"))
 ```
 
 ```{r}
@@ -399,6 +403,22 @@ result_cens %>%
 ```
 
 ```{r}
+result %>% 
+  filter(net == max(net)) %>% glimpse
+```
+
+The big outlier in the above figure is plot 1,
+with these 4 species:
+
+```{r}
+data %>% 
+  filter(plot == "001") %>% 
+  distinct(genus_species)
+```
+
+Plot 105 has the same species mix
+
+```{r}
 result_cens %>% 
   pivot_longer(cols = where(is.numeric)) %>%
   filter(name == "compl" | name == "selec" ) %>% 
@@ -441,3 +461,320 @@ result_cens %>%
   plot_layout(ncol = 1)
   
 ```
+
+# Genus richness
+
+```{r}
+genus_data <- 
+  data %>% 
+  left_join(taxa, by = c("genus_species" = "genus_species.ORIG")) %>% 
+  group_by(plot) %>% 
+  summarise(n_genus = n_distinct(specificEpithet)) %>% 
+  mutate(n_genus = as.factor(n_genus))
+```
+
+```{r}
+result %>% 
+  left_join(genus_data) %>% 
+  ggplot(aes(x = n_genus, y = net)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Net biodiversity effect") +
+  
+  result %>% 
+  left_join(genus_data) %>% 
+  ggplot(aes(x = n_genus, y = selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect") +
+  
+  result %>% 
+  left_join(genus_data) %>% 
+  ggplot(aes(x = n_genus, y = compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect") +
+  
+  plot_annotation(title = "Genus richness")
+```
+
+```{r}
+result %>% 
+  left_join(genus_data) %>%
+  ggplot(aes(x = n_genus, y = dens.selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect - density") +
+  
+  result %>% 
+  left_join(genus_data) %>%
+  ggplot(aes(x = n_genus, y = size.selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect - size") +
+  
+  plot_annotation(title = "Genus richness")
+```
+
+```{r}
+result %>% 
+  left_join(genus_data) %>%
+  ggplot(aes(x = n_genus, y = dens.compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect - density") +
+  
+  result %>% 
+  left_join(genus_data) %>%
+  ggplot(aes(x = n_genus, y = size.compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect - size") +
+  
+  plot_annotation(title = "Genus richness")
+```
+
+```{r}
+result_cens %>% 
+  left_join(genus_data) %>%
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "net") %>% 
+  left_join(delta) %>% 
+  ggplot(aes(x = census, y = value, colour = delta)) +
+  geom_line(aes(group = plot, colour = delta)) +
+  geom_point() +
+  scale_colour_gradientn(colours = colorspace::divergingx_hcl(n = 20, palette = "RdBu"),
+                           limits = c(-1, 1)) +
+  labs(y = "basal area m2 per plot") +
+  facet_wrap(~n_genus) +
+  ggtitle("Net biodiversity effect") +
+  plot_annotation(title = "Genus richness")
+```
+
+
+```{r}
+result_cens %>% 
+  left_join(genus_data) %>%
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "compl" | name == "selec" ) %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot") +
+  facet_wrap(~n_genus) +
+  plot_annotation(title = "Genus richness")
+```
+
+
+```{r}
+result_cens %>% 
+  left_join(genus_data) %>%
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "size.selec" | name == "dens.compl" ) %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot",
+       title = "Selection effect") +
+  facet_wrap(~n_genus) +
+  
+  result_cens %>% 
+  left_join(genus_data) %>%
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "size.compl" |name == "dens.compl") %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot",
+       title = "Complementarity effect") +
+  facet_wrap(~n_genus) +
+  
+  plot_layout(ncol = 1) +
+  plot_annotation(title = "Genus richness")
+  
+```
+
+# Canopy complexity
+
+```{r}
+canopy_data <- 
+  data %>% 
+  select(plot, species_mix) %>% 
+  distinct() %>% 
+  mutate(canopy = case_when(
+    species_mix == "4-species(1)" |
+      species_mix == "4-species(2)" ~ "2_tall_med",
+    species_mix == "4-species(3)" |
+      species_mix == "4-species(4)" ~ "2_short_med",
+    species_mix == "4-species(5)" |
+      species_mix == "4-species(6)" |
+      species_mix == "4-species(7)" |
+      species_mix == "4-species(8)" ~ "3_short_med_tall",
+    species_mix == "4-species(9)" |
+      species_mix == "4-species(10)" |
+      species_mix == "4-species(11)" |
+      species_mix == "4-species(12)" ~ "1_tall",
+    species_mix == "4-species(13)" |
+      species_mix == "4-species(14)" |
+      species_mix == "4-species(15)" |
+      species_mix == "4-species(16)" ~ "3_tall_med_short",
+    .default = NA
+  ))
+```
+
+- `tall_med` 2 tall species and 2 medium species
+- `short_med` 2 short species and 2 medium species
+- `short_med_tall` 2 short species, 1 medium and 1 tall
+- `tall` 4 tall species
+- `tall_med_short` 2 tall species, 1 medium and 1 short
+
+```{r}
+result %>% 
+  left_join(canopy_data) %>% 
+  drop_na(canopy) %>% 
+  ggplot(aes(x = canopy, y = net)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Net biodiversity effect") +
+  
+  result %>% 
+  left_join(canopy_data) %>% 
+  drop_na(canopy) %>% 
+  ggplot(aes(x = canopy, y = selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect") +
+  
+  result %>% 
+  left_join(canopy_data) %>% 
+  drop_na(canopy) %>% 
+  ggplot(aes(x = canopy, y = compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect") +
+  
+  plot_annotation(title = "Canopy complexity") &
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+```{r}
+result %>% 
+  left_join(canopy_data) %>%
+  drop_na(canopy) %>% 
+  ggplot(aes(x = canopy, y = dens.selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect - density") +
+  
+  result %>% 
+  left_join(canopy_data) %>%
+  drop_na(canopy) %>% 
+  ggplot(aes(x = canopy, y = size.selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect - size") +
+  
+  plot_annotation(title = "Canopy complexity") &
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+```{r}
+result %>% 
+  left_join(canopy_data) %>%
+  drop_na(canopy) %>% 
+  ggplot(aes(x = canopy, y = dens.compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect - density") +
+  
+  result %>% 
+  left_join(canopy_data) %>%
+  drop_na(canopy) %>% 
+  ggplot(aes(x = canopy, y = size.compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect - size") +
+  
+  plot_annotation(title = "Canopy complexity") &
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+```{r}
+result_cens %>% 
+  left_join(canopy_data) %>%
+  drop_na(canopy) %>% 
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "net") %>% 
+  left_join(delta) %>% 
+  ggplot(aes(x = census, y = value, colour = delta)) +
+  geom_line(aes(group = plot, colour = delta)) +
+  geom_point() +
+  scale_colour_gradientn(colours = colorspace::divergingx_hcl(n = 20, palette = "RdBu"),
+                           limits = c(-1, 1)) +
+  labs(y = "basal area m2 per plot") +
+  facet_wrap(~canopy) +
+  ggtitle("Net biodiversity effect") +
+  plot_annotation(title = "Canopy complexity") 
+```
+
+
+```{r}
+result_cens %>% 
+  left_join(canopy_data) %>%
+  drop_na(canopy) %>% 
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "compl" | name == "selec" ) %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot") +
+  facet_wrap(~canopy) +
+  plot_annotation(title = "Canopy complexity")
+```
+
+
+```{r}
+#| fig-height: 8
+#| fig-width: 5
+
+result_cens %>% 
+  left_join(canopy_data) %>%
+  drop_na(canopy) %>% 
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "size.selec" | name == "dens.compl" ) %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot",
+       title = "Selection effect") +
+  facet_wrap(~canopy) +
+  
+  result_cens %>% 
+  left_join(canopy_data) %>%
+  drop_na(canopy) %>% 
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "size.compl" |name == "dens.compl") %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot",
+       title = "Complementarity effect") +
+  facet_wrap(~canopy) +
+  
+  plot_layout(ncol = 1) +
+  plot_annotation(title = "Canopy complexity")
+  
+```
+
