@@ -1,0 +1,443 @@
+---
+title: "Partitioning density and size components of biodiversity effects"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+set.seed(20531)
+
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+```{r}
+library("tidyverse")
+library("patchwork")
+```
+
+Attempting to get the the net, complementarity, and selection effects of biodiversity, 
+using the [{densize} package](https://github.com/communityecologist/densize)
+from [Tatsumi & Loreau 2023.](https://doi.org/10.1111/ele.14300)
+
+```{r}
+#devtools::install_github("communityecologist/densize")
+library("densize")
+```
+
+> The specific data required are: (i) the initial density of each species sown, planted, or inoculated in each experimental unit (e.g. plot, chemostat) (`init.dens`); (ii) the biomass y of each species in each unit (`final.yield`); and (iii) the plant density d of each species in each unit at the time of biomass measurement (`final.dens`). Note that the biomass y does not have to be recorded at the individual level but only at the species level. Plant density d can be measured either by counting the individuals directly or by dividing the species biomass y by the mean per-plant biomass of representative individuals in each sampling unit.
+
+`densize(init.dens, final.dens, final.yield)`
+
+`init.dens` : A matrix or data frame consisting of initial plant density (the number of plants or seeds sown per area).
+
+`final.dens` : A matrix or data frame consisting of final plant density (the number of plants survived per area).
+
+`final.yield` : A matrix or data frame consisting of final yield (yield per area).
+
+## Create `init.dens`
+
+```{r}
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) 
+```
+
+```{r}
+init_dens <- 
+  data %>% 
+  filter(census_id == "full_measurement_01") %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = n) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+```
+
+```{r}
+glimpse(init_dens)
+```
+
+## Create `final.dens`
+
+```{r}
+final_dens <- 
+  data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  filter(survival == 1) %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = n) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+```
+
+```{r}
+glimpse(final_dens)
+```
+
+## Create `final.yield`
+
+```{r}
+final_yield <- 
+  data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  filter(survival == 1) %>% 
+  mutate(dbase_m = dbase_mm / 1000) %>% 
+  mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = sum) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+```
+
+```{r}
+glimpse(final_yield)
+```
+
+## Run function
+
+```{r}
+densize_out <- 
+  densize(init.dens = init_dens, 
+        final.dens = final_dens, 
+        final.yield = final_yield) %>% 
+  as_tibble()
+
+metadata <- 
+  data %>% 
+  select(plot, treatment) %>% 
+  distinct() %>% 
+  filter(treatment != "monoculture") %>% 
+  arrange(plot)
+
+result <- 
+  bind_cols(densize_out, metadata) %>% 
+  mutate(compl = dens.compl + size.compl,
+         selec = dens.selec + size.selec,
+         net = compl + selec) %>% 
+  mutate(treatment = fct_relevel(treatment, 
+                                 "4-species", 
+                                 "16-species",
+                                 "16-species-cut"))
+
+glimpse(result)
+```
+
+## Plotting
+
+```{r}
+result %>% 
+  ggplot(aes(x = treatment, y = net)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Net biodiversity effect") +
+  
+  result %>% 
+  ggplot(aes(x = treatment, y = selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect") +
+  
+  result %>% 
+  ggplot(aes(x = treatment, y = compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect")
+```
+
+Looks like:
+
+- Net biodiversity effect might increase with Liana cutting
+- Selection effect might decrease with species richness
+- Complementarity effect might increase with species richness
+
+```{r}
+result %>% 
+  ggplot(aes(x = treatment, y = dens.selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect - density") +
+  
+  result %>% 
+  ggplot(aes(x = treatment, y = size.selec)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Selection effect - size") 
+```
+
+Differences in selection effect are mostly driven by density rather than size?
+
+```{r}
+result %>% 
+  ggplot(aes(x = treatment, y = dens.compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect - density") +
+  
+  result %>% 
+  ggplot(aes(x = treatment, y = size.compl)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  ggtitle("Complementarity effect - size") 
+```
+
+
+```{r}
+dens_size <-
+  data %>% 
+  filter(survival == 1) %>% 
+  mutate(dbase_m = dbase_mm / 1000) %>% 
+  mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  group_by(plot, treatment) %>% 
+  summarise(dens = n_distinct(plant_id),
+            size = sum(basal_area_m2)) %>% 
+  mutate(size = size / dens) 
+
+dens_size %>% 
+  ggplot(aes(x = dens, y = size, colour = treatment)) +
+  geom_point() +
+  geom_text(data = 
+              filter(dens_size, size > 0.015 | dens > 300),
+            aes(label = plot),
+            position = position_nudge(y = -0.001) ) +
+  labs(y = "Plant size (mean basal area per plant m2)",
+       x = "Plant density (number per plot)",
+       title = "Density–size relationships")
+```
+
+No clear density-size pattern!
+
+Taking a look at which species are included in those outlier plots:
+
+```{r}
+data %>%
+  filter(plot == "114" |
+           plot == "065" |
+           plot == "001" |
+           plot == "002" |
+           plot == "004") %>% 
+  select(plot, treatment, genus_species) %>% 
+  distinct()
+  
+```
+
+
+# Biodiversity effects over time
+
+Above we are looking from the 1st census to the 3rd.
+We can also break it down to look between the 1st and 2nd censuses 
+and the 2nd and 3rd censuses.
+
+```{r}
+# Census 1 to 2
+init_dens_01 <- 
+  data %>% 
+  filter(census_id == "full_measurement_01") %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = n) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+
+final_dens_02 <- 
+  data %>% 
+  filter(census_id == "full_measurement_02") %>% 
+  filter(survival == 1) %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = n) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+
+final_yield_02 <- 
+  data %>% 
+  filter(census_id == "full_measurement_02") %>% 
+  filter(survival == 1) %>% 
+  mutate(dbase_m = dbase_mm / 1000) %>% 
+  mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = sum) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+
+densize_out_1_2 <- 
+  densize(init.dens = init_dens_01, 
+        final.dens = final_dens_02, 
+        final.yield = final_yield_02) %>% 
+  as_tibble()
+
+result_1_2 <- 
+  bind_cols(densize_out_1_2, metadata) %>% 
+  mutate(compl = dens.compl + size.compl,
+         selec = dens.selec + size.selec,
+         net = compl + selec) %>% 
+  mutate(treatment = fct_relevel(treatment, 
+                                 "4-species", 
+                                 "16-species",
+                                 "16-species-cut"))
+
+# Census 2 to 3
+
+init_dens_02 <- 
+  data %>% 
+  filter(census_id == "full_measurement_02") %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = n) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+
+final_dens_03 <- 
+  data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  filter(survival == 1) %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = n) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+
+final_yield_03 <- 
+  data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  filter(survival == 1) %>% 
+  mutate(dbase_m = dbase_mm / 1000) %>% 
+  mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
+  group_by(plot, genus_species) %>% 
+  summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
+  pivot_wider(id_cols = plot,
+              names_from = genus_species,
+              values_from = sum) %>% 
+  mutate(across(everything(), \(x) replace_na(x, 0))) %>% 
+  arrange(plot) %>% 
+  column_to_rownames(var = "plot")
+
+densize_out_2_3 <- 
+  densize(init.dens = init_dens_02, 
+        final.dens = final_dens_03, 
+        final.yield = final_yield_03) %>% 
+  as_tibble()
+
+result_2_3 <- 
+  bind_cols(densize_out_2_3, metadata) %>% 
+  mutate(compl = dens.compl + size.compl,
+         selec = dens.selec + size.selec,
+         net = compl + selec) %>% 
+  mutate(treatment = fct_relevel(treatment, 
+                                 "4-species", 
+                                 "16-species",
+                                 "16-species-cut"))
+```
+
+```{r}
+result_cens <- 
+  bind_rows(list("02" = result_1_2, "03" = result_2_3),
+          .id = "census") %>% glimpse
+```
+
+```{r}
+delta <- 
+  result_cens %>% 
+  select(census, treatment, census, net, plot) %>%
+  pivot_wider(names_from = census, values_from = net, id_cols = c(treatment, plot)) %>%
+  mutate(delta = `03` - `02`) %>% 
+  select(treatment, plot, delta)
+
+result_cens %>% 
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "net") %>% 
+  left_join(delta) %>% 
+  ggplot(aes(x = census, y = value, colour = delta)) +
+  geom_line(aes(group = plot, colour = delta)) +
+  geom_point() +
+  scale_colour_gradientn(colours = colorspace::divergingx_hcl(n = 20, palette = "RdBu"),
+                           limits = c(-1, 1)) +
+  labs(y = "basal area m2 per plot") +
+  facet_wrap(~treatment) +
+  ggtitle("Net biodiversity effect")
+```
+
+```{r}
+result_cens %>% 
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "compl" | name == "selec" ) %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot") +
+  facet_wrap(~treatment)
+```
+
+Selection and complementarity effects increase in magnitude over time.
+
+```{r}
+result_cens %>% 
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "size.selec" | name == "dens.compl" ) %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot",
+       title = "Selection effect") +
+  facet_wrap(~treatment) +
+  
+  result_cens %>% 
+  pivot_longer(cols = where(is.numeric)) %>%
+  filter(name == "size.compl" |name == "dens.compl") %>% 
+  ggplot(aes(x = census, y = value, colour = name)) +
+  geom_line(aes(group = interaction(plot, name), colour = name),
+              linewidth = 0.25,
+              alpha = 0.4) +
+  geom_point() +
+  labs(y = "basal area m2 per plot",
+       title = "Complementarity effect") +
+  facet_wrap(~treatment) +
+  
+  plot_layout(ncol = 1)
+  
+```
