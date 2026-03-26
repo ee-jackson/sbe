@@ -7,16 +7,17 @@ eleanorjackson
 - [Create `final.yield`](#create-finalyield)
 - [Run function](#run-function)
 - [Plotting](#plotting)
-- [Biodiversity effects over time](#biodiversity-effects-over-time)
-- [Genus richness](#genus-richness)
-- [Canopy complexity](#canopy-complexity)
-  - [Modelling?](#modelling)
+  - [Biodiversity effects over time](#biodiversity-effects-over-time)
+  - [Genus richness](#genus-richness)
+  - [Canopy complexity](#canopy-complexity)
+- [Modelling?](#modelling)
 
 ``` r
 library("tidyverse")
 library("patchwork")
 library("lme4")
 library("broom.mixed")
+library("emmeans")
 ```
 
 Attempting to get the the net, complementarity, and selection effects of
@@ -51,7 +52,7 @@ library("densize")
 `final.yield` : A matrix or data frame consisting of final yield (yield
 per area).
 
-## Create `init.dens`
+# Create `init.dens`
 
 ``` r
 data <- 
@@ -99,7 +100,7 @@ glimpse(init_dens)
     $ Shorea_ovalis           <int> 0, 0, 82, 0, 78, 0, 0, 74, 0, 0, 81, 0, 0, 87,…
     $ Shorea_parvifolia       <int> 0, 0, 71, 0, 76, 0, 0, 80, 318, 0, 73, 0, 0, 7…
 
-## Create `final.dens`
+# Create `final.dens`
 
 ``` r
 final_dens <- 
@@ -139,7 +140,7 @@ glimpse(final_dens)
     $ Shorea_ovalis           <int> 0, 0, 21, 0, 9, 0, 0, 9, 0, 0, 13, 0, 0, 17, 1…
     $ Shorea_parvifolia       <int> 0, 0, 4, 0, 6, 0, 0, 4, 7, 0, 5, 0, 0, 5, 6, 0…
 
-## Create `final.yield`
+# Create `final.yield`
 
 ``` r
 final_yield <- 
@@ -181,7 +182,7 @@ glimpse(final_yield)
     $ Shorea_ovalis           <dbl> 0.00000000, 0.00000000, 0.16324853, 0.00000000…
     $ Shorea_parvifolia       <dbl> 0.0000000000, 0.0000000000, 0.0827456726, 0.00…
 
-## Run function
+# Run function
 
 ``` r
 densize_out <- 
@@ -222,7 +223,7 @@ glimpse(result)
     $ selec      <dbl> 0.867134643, -0.171272382, 0.056966463, -0.685939709, -0.16…
     $ net        <dbl> 4.151434253, 0.458924465, 0.555232847, 0.273652459, 0.02194…
 
-## Plotting
+# Plotting
 
 ``` r
 result %>% 
@@ -340,7 +341,7 @@ data %>%
     7 065   monoculture Shorea_parvifolia      
     8 114   monoculture Shorea_leprosula       
 
-# Biodiversity effects over time
+## Biodiversity effects over time
 
 Above we are looking from the 1st census to the 3rd. We can also break
 it down to look between the 1st and 2nd censuses and the 2nd and 3rd
@@ -588,7 +589,7 @@ result_cens %>%
 
 ![](figures/2026-03-19_densize-package/unnamed-chunk-22-1.png)
 
-# Genus richness
+## Genus richness
 
 ``` r
 genus_data <- 
@@ -754,7 +755,7 @@ result_cens %>%
 
 ![](figures/2026-03-19_densize-package/unnamed-chunk-30-1.png)
 
-# Canopy complexity
+## Canopy complexity
 
 ``` r
 canopy_data <- 
@@ -938,7 +939,7 @@ result_cens %>%
 
 ![](figures/2026-03-19_densize-package/unnamed-chunk-37-1.png)
 
-## Modelling?
+# Modelling?
 
 Try some quick models
 
@@ -992,13 +993,23 @@ m_CE_dens <-
 
 m_SE <- 
   lme4::lmer(selec ~ 0 + treatment + (1 |species_mix), data_mod) 
+```
 
+    boundary (singular) fit: see help('isSingular')
+
+``` r
 m_SE_size <- 
   lme4::lmer(size.selec ~ 0 + treatment + (1 |species_mix), data_mod) 
+```
 
+    boundary (singular) fit: see help('isSingular')
+
+``` r
 m_SE_dens <- 
   lme4::lmer(dens.selec ~ 0 + treatment + (1 |species_mix), data_mod) 
 ```
+
+    boundary (singular) fit: see help('isSingular')
 
 Getting singular fits for all the selection effect models
 
@@ -1033,3 +1044,96 @@ my_coef_tab %>%
 ```
 
 ![](figures/2026-03-19_densize-package/unnamed-chunk-42-1.png)
+
+Let’s try using the 2 time points
+
+``` r
+data_mod2 <- 
+  result_cens %>% 
+  left_join(genus_data) %>% 
+  left_join(canopy_data) %>% 
+  mutate(census = as.factor(census))
+```
+
+``` r
+m_NE <- 
+  lme4::lmer(net ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+
+m_CE <- 
+  lme4::lmer(compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+
+m_CE_size <- 
+  lme4::lmer(size.compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+
+m_CE_dens <- 
+  lme4::lmer(dens.compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+
+m_SE <- 
+  lme4::lmer(selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+```
+
+    boundary (singular) fit: see help('isSingular')
+
+``` r
+m_SE_size <- 
+  lme4::lmer(size.selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+```
+
+    boundary (singular) fit: see help('isSingular')
+
+``` r
+m_SE_dens <- 
+  lme4::lmer(dens.selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+```
+
+    boundary (singular) fit: see help('isSingular')
+
+``` r
+my_coef_tab2 <-
+  tibble(fit = c(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
+         model = c("m_NE", "m_CE", "m_CE_size", 
+                   "m_CE_dens", "m_SE", "m_SE_size", "m_SE_dens")) %>%
+  mutate(tidy = purrr::map(
+    fit,
+    emmeans,
+    ~ treatment * census
+  )) %>%
+  mutate(tidy = purrr::map(
+    tidy,
+    as_tibble
+  )) %>%
+  unnest(tidy) %>% 
+  mutate(treatment = fct_relevel(treatment, 
+                            "4-species", 
+                            "16-species",
+                            "16-species-cut"))
+```
+
+``` r
+delta_emmeans <- 
+  my_coef_tab2 %>% 
+  select( - fit) %>% 
+  pivot_wider(names_from = census, 
+              id_cols = c("treatment", "model"),
+              values_from = c("emmean", "lower.CL", "upper.CL")) %>% 
+  mutate(emmean = emmean_03 - emmean_02,
+         lower.CL = lower.CL_03 - lower.CL_02,
+         upper.CL = upper.CL_03 - upper.CL_02,
+         census = "delta, 03 - 02") %>% 
+  select(model, treatment, census, emmean, lower.CL, upper.CL)
+```
+
+``` r
+my_coef_tab2 %>% 
+  select(model, treatment, census, emmean, lower.CL, upper.CL) %>% 
+  bind_rows(delta_emmeans) %>% 
+  ggplot(aes(x = treatment, y = emmean, ymin = lower.CL, ymax = upper.CL)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  labs(x = "Treatment",
+       y = "Estimated marginal means [95%]") +
+  geom_hline(yintercept = 0,  color = "blue") +
+  coord_flip() +
+  facet_wrap(model~census, scales = "free_x", ncol = 3)
+```
+
+![](figures/2026-03-19_densize-package/unnamed-chunk-47-1.png)
