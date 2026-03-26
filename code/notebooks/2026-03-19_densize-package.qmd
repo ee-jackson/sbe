@@ -800,7 +800,7 @@ Try some quick models
 data_mod <- 
   result %>% 
   left_join(genus_data) %>% 
-  left_join(canopy_data)
+  left_join(canopy_data) 
 
 ```
 
@@ -832,25 +832,25 @@ but will try Gaussian first.
 
 ```{r}
 m_NE <- 
-  lme4::lmer(net ~ treatment + (1 |species_mix), data_mod) 
+  lme4::lmer(net ~ 0 + treatment + (1 |species_mix), data_mod) 
 
 m_CE <- 
-  lme4::lmer(compl ~ treatment + (1 |species_mix), data_mod) 
+  lme4::lmer(compl ~ 0 + treatment + (1 |species_mix), data_mod) 
 
 m_CE_size <- 
-  lme4::lmer(size.compl ~ treatment + (1 |species_mix), data_mod) 
+  lme4::lmer(size.compl ~ 0 + treatment + (1 |species_mix), data_mod) 
 
 m_CE_dens <- 
-  lme4::lmer(dens.compl ~ treatment + (1 |species_mix), data_mod) 
+  lme4::lmer(dens.compl ~ 0 + treatment + (1 |species_mix), data_mod) 
 
 m_SE <- 
-  lme4::lmer(selec ~ treatment + (1 |species_mix), data_mod) 
+  lme4::lmer(selec ~ 0 + treatment + (1 |species_mix), data_mod) 
 
 m_SE_size <- 
-  lme4::lmer(size.selec ~ treatment + (1 |species_mix), data_mod) 
+  lme4::lmer(size.selec ~ 0 + treatment + (1 |species_mix), data_mod) 
 
 m_SE_dens <- 
-  lme4::lmer(dens.selec ~ treatment + (1 |species_mix), data_mod) 
+  lme4::lmer(dens.selec ~ 0 + treatment + (1 |species_mix), data_mod) 
 ```
 
 Getting singular fits for all the selection effect models
@@ -867,7 +867,11 @@ my_coef_tab <-
     robust = TRUE,
     conf.int = TRUE
   )) %>%
-  unnest(tidy)
+  unnest(tidy) %>% 
+  mutate(term = fct_relevel(term, 
+                            "treatment4-species", 
+                            "treatment16-species",
+                            "treatment16-species-cut"))
 ```
 
 ```{r}
