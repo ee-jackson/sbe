@@ -10,10 +10,13 @@ eleanorjackson
 - [Biodiversity effects over time](#biodiversity-effects-over-time)
 - [Genus richness](#genus-richness)
 - [Canopy complexity](#canopy-complexity)
+  - [Modelling?](#modelling)
 
 ``` r
 library("tidyverse")
 library("patchwork")
+library("lme4")
+library("broom.mixed")
 ```
 
 Attempting to get the the net, complementarity, and selection effects of
@@ -601,6 +604,23 @@ genus_data <-
 ``` r
 result %>% 
   left_join(genus_data) %>% 
+  group_by(n_genus) %>% 
+  summarise(n_distinct(plot))
+```
+
+    # A tibble: 4 × 2
+      n_genus `n_distinct(plot)`
+      <fct>                <int>
+    1 2                       12
+    2 3                        4
+    3 4                       16
+    4 6                       48
+
+After taxonomy change, only 4 plots with 3 genus.
+
+``` r
+result %>% 
+  left_join(genus_data) %>% 
   ggplot(aes(x = n_genus, y = net)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
@@ -623,7 +643,7 @@ result %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-24-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-25-1.png)
 
 ``` r
 result %>% 
@@ -643,7 +663,7 @@ result %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-25-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-26-1.png)
 
 ``` r
 result %>% 
@@ -663,7 +683,7 @@ result %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-26-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-27-1.png)
 
 ``` r
 result_cens %>% 
@@ -682,7 +702,7 @@ result_cens %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-27-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-28-1.png)
 
 ``` r
 result_cens %>% 
@@ -699,7 +719,7 @@ result_cens %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-28-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-29-1.png)
 
 ``` r
 result_cens %>% 
@@ -732,7 +752,7 @@ result_cens %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-29-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-30-1.png)
 
 # Canopy complexity
 
@@ -797,7 +817,7 @@ result %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-31-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-32-1.png)
 
 ``` r
 result %>% 
@@ -820,7 +840,7 @@ result %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-32-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-33-1.png)
 
 ``` r
 result %>% 
@@ -843,7 +863,7 @@ result %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-33-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-34-1.png)
 
 ``` r
 result_cens %>% 
@@ -863,7 +883,7 @@ result_cens %>%
   plot_annotation(title = "Canopy complexity") 
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-34-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-35-1.png)
 
 ``` r
 result_cens %>% 
@@ -881,7 +901,7 @@ result_cens %>%
   plot_annotation(title = "Canopy complexity")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-35-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-36-1.png)
 
 ``` r
 result_cens %>% 
@@ -916,4 +936,96 @@ result_cens %>%
   plot_annotation(title = "Canopy complexity")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-36-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-37-1.png)
+
+## Modelling?
+
+Try some quick models
+
+``` r
+data_mod <- 
+  result %>% 
+  left_join(genus_data) %>% 
+  left_join(canopy_data)
+```
+
+``` r
+data_mod %>% 
+  ggplot(aes(x = net)) + geom_density() +
+  
+  data_mod %>% 
+  ggplot(aes(x = compl)) + geom_density() +
+  
+  data_mod %>% 
+  ggplot(aes(x = selec)) + geom_density() +
+  
+  data_mod %>% 
+  ggplot(aes(x = size.compl)) + geom_density() +
+  
+  data_mod %>% 
+  ggplot(aes(x = dens.compl)) + geom_density() +
+  
+  data_mod %>% 
+  ggplot(aes(x = size.selec)) + geom_density() +
+  
+  data_mod %>% 
+  ggplot(aes(x = dens.selec)) + geom_density() 
+```
+
+![](figures/2026-03-19_densize-package/unnamed-chunk-39-1.png)
+
+Some long tails - suggests a student’s T response distribution may be
+better but will try Gaussian first.
+
+``` r
+m_NE <- 
+  lme4::lmer(net ~ treatment + (1 |species_mix), data_mod) 
+
+m_CE <- 
+  lme4::lmer(compl ~ treatment + (1 |species_mix), data_mod) 
+
+m_CE_size <- 
+  lme4::lmer(size.compl ~ treatment + (1 |species_mix), data_mod) 
+
+m_CE_dens <- 
+  lme4::lmer(dens.compl ~ treatment + (1 |species_mix), data_mod) 
+
+m_SE <- 
+  lme4::lmer(selec ~ treatment + (1 |species_mix), data_mod) 
+
+m_SE_size <- 
+  lme4::lmer(size.selec ~ treatment + (1 |species_mix), data_mod) 
+
+m_SE_dens <- 
+  lme4::lmer(dens.selec ~ treatment + (1 |species_mix), data_mod) 
+```
+
+Getting singular fits for all the selection effect models
+
+``` r
+my_coef_tab <-
+  tibble(fit = c(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
+         model = c("m_NE", "m_CE", "m_CE_size", 
+                   "m_CE_dens", "m_SE", "m_SE_size", "m_SE_dens")) %>%
+  mutate(tidy = purrr::map(
+    fit,
+    tidy,
+    effects = "fixed",
+    robust = TRUE,
+    conf.int = TRUE
+  )) %>%
+  unnest(tidy)
+```
+
+``` r
+my_coef_tab %>% 
+  ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  labs(x = "Term",
+       y = "Estimate ± CI [95%]") +
+  geom_hline(yintercept = 0,  color = "blue") +
+  coord_flip() +
+  facet_wrap(~model, ncol = 1)
+```
+
+![](figures/2026-03-19_densize-package/unnamed-chunk-42-1.png)
