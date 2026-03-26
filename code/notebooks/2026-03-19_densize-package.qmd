@@ -468,8 +468,10 @@ result_cens %>%
 genus_data <- 
   data %>% 
   left_join(taxa, by = c("genus_species" = "genus_species.ORIG")) %>% 
+  mutate(genus = case_when(is.na(genus.y) ~ genus.x,
+                           .default = genus.y)) %>% 
   group_by(plot) %>% 
-  summarise(n_genus = n_distinct(specificEpithet)) %>% 
+  summarise(n_genus = n_distinct(genus)) %>% 
   mutate(n_genus = as.factor(n_genus))
 ```
 
@@ -777,4 +779,3 @@ result_cens %>%
   plot_annotation(title = "Canopy complexity")
   
 ```
-

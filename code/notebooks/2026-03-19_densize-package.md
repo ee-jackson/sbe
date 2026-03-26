@@ -1,6 +1,6 @@
 # Partitioning density and size components of biodiversity effects
 eleanorjackson
-2026-03-24
+2026-03-26
 
 - [Create `init.dens`](#create-initdens)
 - [Create `final.dens`](#create-finaldens)
@@ -591,8 +591,10 @@ result_cens %>%
 genus_data <- 
   data %>% 
   left_join(taxa, by = c("genus_species" = "genus_species.ORIG")) %>% 
+  mutate(genus = case_when(is.na(genus.y) ~ genus.x,
+                           .default = genus.y)) %>% 
   group_by(plot) %>% 
-  summarise(n_genus = n_distinct(specificEpithet)) %>% 
+  summarise(n_genus = n_distinct(genus)) %>% 
   mutate(n_genus = as.factor(n_genus))
 ```
 
