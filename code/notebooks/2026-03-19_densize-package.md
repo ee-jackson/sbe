@@ -1,6 +1,6 @@
 # Partitioning density and size components of biodiversity effects
 eleanorjackson
-2026-03-26
+2026-03-27
 
 - [Create `init.dens`](#create-initdens)
 - [Create `final.dens`](#create-finaldens)
@@ -230,18 +230,21 @@ result %>%
   ggplot(aes(x = treatment, y = net)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Net biodiversity effect") +
   
   result %>% 
   ggplot(aes(x = treatment, y = selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect") +
   
   result %>% 
   ggplot(aes(x = treatment, y = compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect")
 ```
 
@@ -258,12 +261,14 @@ result %>%
   ggplot(aes(x = treatment, y = dens.selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect - density") +
   
   result %>% 
   ggplot(aes(x = treatment, y = size.selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect - size") 
 ```
 
@@ -277,12 +282,14 @@ result %>%
   ggplot(aes(x = treatment, y = dens.compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect - density") +
   
   result %>% 
   ggplot(aes(x = treatment, y = size.compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect - size") 
 ```
 
@@ -625,6 +632,7 @@ result %>%
   ggplot(aes(x = n_genus, y = net)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Net biodiversity effect") +
   
   result %>% 
@@ -632,6 +640,7 @@ result %>%
   ggplot(aes(x = n_genus, y = selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect") +
   
   result %>% 
@@ -639,6 +648,7 @@ result %>%
   ggplot(aes(x = n_genus, y = compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect") +
   
   plot_annotation(title = "Genus richness")
@@ -652,6 +662,7 @@ result %>%
   ggplot(aes(x = n_genus, y = dens.selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect - density") +
   
   result %>% 
@@ -659,6 +670,7 @@ result %>%
   ggplot(aes(x = n_genus, y = size.selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect - size") +
   
   plot_annotation(title = "Genus richness")
@@ -672,6 +684,7 @@ result %>%
   ggplot(aes(x = n_genus, y = dens.compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect - density") +
   
   result %>% 
@@ -679,6 +692,7 @@ result %>%
   ggplot(aes(x = n_genus, y = size.compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect - size") +
   
   plot_annotation(title = "Genus richness")
@@ -796,6 +810,7 @@ result %>%
   ggplot(aes(x = canopy, y = net)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Net biodiversity effect") +
   
   result %>% 
@@ -804,6 +819,7 @@ result %>%
   ggplot(aes(x = canopy, y = selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect") +
   
   result %>% 
@@ -812,6 +828,7 @@ result %>%
   ggplot(aes(x = canopy, y = compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect") +
   
   plot_annotation(title = "Canopy complexity") &
@@ -827,6 +844,7 @@ result %>%
   ggplot(aes(x = canopy, y = dens.selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect - density") +
   
   result %>% 
@@ -835,6 +853,7 @@ result %>%
   ggplot(aes(x = canopy, y = size.selec)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Selection effect - size") +
   
   plot_annotation(title = "Canopy complexity") &
@@ -850,6 +869,7 @@ result %>%
   ggplot(aes(x = canopy, y = dens.compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect - density") +
   
   result %>% 
@@ -858,6 +878,7 @@ result %>%
   ggplot(aes(x = canopy, y = size.compl)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
   ggtitle("Complementarity effect - size") +
   
   plot_annotation(title = "Canopy complexity") &
