@@ -1,6 +1,6 @@
 # The second decade of the Sabah biodiversity experiment
 eleanorjackson
-2025-11-28
+2026-03-30
 
 - [Calculate growth](#calculate-growth)
 - [Calculate survival](#calculate-survival)
@@ -103,7 +103,7 @@ data_gro_surv <-
 glimpse(data_gro_surv)
 ```
 
-    Rows: 174,254
+    Rows: 172,578
     Columns: 19
     $ plant_id       <fct> 001_01_001_O, 001_01_002_N, 001_01_002_O, 001_01_003_O,…
     $ survival_00_01 <dbl> 1, NA, 1, 1, 1, 0, 0, 0, 0, 0, 1, NA, 0, 0, 0, NA, 0, N…
@@ -122,8 +122,8 @@ glimpse(data_gro_surv)
     $ planting_date  <date> 2002-07-18, NA, 2002-07-18, 2002-07-18, 2002-07-18, 20…
     $ first_survey   <date> 2003-11-18, 2011-11-25, 2003-11-18, 2003-11-18, 2003-1…
     $ growth_01_02   <dbl> 942.5938, NA, 1452.8634, 1570.1607, 838.2968, NA, NA, N…
-    $ growth_02_03   <dbl> -85.00000, 420.83333, 49.64539, NaN, 182.60870, NaN, Na…
-    $ growth_01_03   <dbl> 56.38907, NA, 2223.78855, NA, 2551.70831, NA, NA, NA, N…
+    $ growth_02_03   <dbl> -85.00000, 420.83333, 49.64539, 71.44123, 182.60870, Na…
+    $ growth_01_03   <dbl> 56.38907, NA, 2223.78855, 2763.34412, 2551.70831, NA, N…
 
 # Figure 1 - Life history trade off?
 
@@ -173,12 +173,29 @@ data_gro_surv %>%
     colour = genus,
     group = genus_species)) +
   geom_point(size = 3) +
+  ggtitle("% increase growth vs survival between census 02 and 03") 
+```
+
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-8-1.png)
+
+``` r
+data_gro_surv %>% 
+  group_by(genus, genus_species, cohort) %>% 
+  summarise(
+    mean_survival = mean(survival_02_03, na.rm=TRUE),
+    mean_growth = mean(growth_02_03, na.rm=TRUE)) %>% 
+  ggplot(aes(
+    y = mean_survival,
+    x = mean_growth,
+    colour = genus,
+    group = genus_species)) +
+  geom_point(size = 3) +
   ggtitle("% increase growth vs survival between census 02 and 03") +
   labs(subtitle = "Cohort 1 vs 2") +
   facet_wrap(~cohort, scales = "free")
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-8-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-9-1.png)
 
 ``` r
 data_gro_surv %>% 
@@ -212,7 +229,7 @@ data_gro_surv %>%
   theme(legend.position = "top")
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-9-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-10-1.png)
 
 > we found a clear life-history trade-off between survival and growth
 > and consistent differences among our 16 dipterocarps in their
@@ -287,17 +304,17 @@ Plotting:
 spatial_surv_13 %>% 
   ggplot(aes(x = plot_effect,
              y = genus_species,
-             colour = plot)) +
+             colour = plot,
+             group = plot)) +
   geom_point() +
-  geom_path(data = filter(spatial_surv_13, plot == "033"),
-            group = "plot") +
+  geom_path(data = filter(spatial_surv_13, plot == "033")) +
   theme(legend.position = "none") +
   geom_vline(xintercept = 0, linetype = 2) +
   labs(x = "relative effect of plot on survival",
        title = "Cohort 1, survival from census 01 to 03")
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-14-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-15-1.png)
 
 Points represent the average survival of a species in a plot relative to
 the overall average of that species — so positive values show plots with
@@ -311,10 +328,10 @@ better-than-average survival.
 spatial_surv_23 %>% 
   ggplot(aes(x = plot_effect,
              y = genus_species,
-             colour = plot)) +
+             colour = plot,
+             group = plot_cohort)) +
   geom_point() +
-  geom_path(data = filter(spatial_surv_23, plot == "033"),
-            group = "plot_cohort") +
+  geom_path(data = filter(spatial_surv_23, plot == "033")) +
   theme(legend.position = "none") +
   geom_vline(xintercept = 0, linetype = 2) +
   labs(x = "relative effect of plot on survival",
@@ -322,7 +339,7 @@ spatial_surv_23 %>%
   facet_wrap(~cohort)
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-15-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-16-1.png)
 
 Findings still hold true here.
 
@@ -341,7 +358,7 @@ data_gro_surv %>%
   ylab("Increase in basal diameter between census 01 and 03 (%)")
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-16-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-17-1.png)
 
 ``` r
 data_gro_surv %>% 
@@ -356,7 +373,7 @@ data_gro_surv %>%
   ylab("Increase in basal diameter between census 01 and 02 (%)")
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-17-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-18-1.png)
 
 ``` r
 data_gro_surv %>% 
@@ -372,7 +389,29 @@ data_gro_surv %>%
   facet_wrap(~cohort)
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-18-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-19-1.png)
+
+``` r
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  filter(survival == 1) %>% 
+  group_by(treatment, plot, cohort) %>% 
+  summarise(
+    n = n_distinct(plant_id),
+    n_survival_ha = n/4) %>% 
+  ggplot(aes(x = treatment, y = n_survival_ha)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  ylab("n surviving trees per ha in census 3") +
+  facet_wrap(~cohort)
+```
+
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-20-1.png)
 
 > as expected, given the wide spacing of the planted seedlings, there is
 > no evidence of complementary species interactions in mixtures yet
@@ -404,7 +443,7 @@ data %>%
   ggtitle("Density of surviving seedlings in 16-species mixtures and monocultures")
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-19-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-21-1.png)
 
 > The replicated monocultures of a given species were often more
 > variable than what we saw among the 16-species mixtures
@@ -446,7 +485,7 @@ data %>%
     title = "Density of surviving seedlings in 16-species mixtures and monocultures")
 ```
 
-![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-20-1.png)
+![](figures/2025-11-25_tuck-et-al-update/unnamed-chunk-22-1.png)
 
 Less variation than when looking at density of surviving seedlings - at
 both plot and species level.

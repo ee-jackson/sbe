@@ -152,6 +152,22 @@ data_gro_surv %>%
     colour = genus,
     group = genus_species)) +
   geom_point(size = 3) +
+  ggtitle("% increase growth vs survival between census 02 and 03") 
+
+```
+
+```{r}
+data_gro_surv %>% 
+  group_by(genus, genus_species, cohort) %>% 
+  summarise(
+    mean_survival = mean(survival_02_03, na.rm=TRUE),
+    mean_growth = mean(growth_02_03, na.rm=TRUE)) %>% 
+  ggplot(aes(
+    y = mean_survival,
+    x = mean_growth,
+    colour = genus,
+    group = genus_species)) +
+  geom_point(size = 3) +
   ggtitle("% increase growth vs survival between census 02 and 03") +
   labs(subtitle = "Cohort 1 vs 2") +
   facet_wrap(~cohort, scales = "free")
@@ -331,6 +347,26 @@ data_gro_surv %>%
                outlier.alpha = 0.5, 
                outlier.shape = 16) +
   ylab("Increase in basal diameter between census 02 and 03 (%)") +
+  facet_wrap(~cohort)
+```
+
+```{r}
+data %>% 
+  filter(census_id == "full_measurement_03") %>% 
+  filter(survival == 1) %>% 
+  group_by(treatment, plot, cohort) %>% 
+  summarise(
+    n = n_distinct(plant_id),
+    n_survival_ha = n/4) %>% 
+  ggplot(aes(x = treatment, y = n_survival_ha)) +
+  see::geom_violinhalf(fill = "grey", 
+                       colour = "grey", 
+                       alpha = 0.8) +
+  geom_boxplot(position = position_nudge(-0.25),
+               width = 0.25,
+               outlier.alpha = 0.5, 
+               outlier.shape = 16) +
+  ylab("n surviving trees per ha in census 3") +
   facet_wrap(~cohort)
 ```
 
