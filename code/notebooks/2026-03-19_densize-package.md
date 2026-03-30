@@ -1,6 +1,6 @@
 # Partitioning density and size components of biodiversity effects
 eleanorjackson
-2026-03-27
+2026-03-30
 
 - [Create `init.dens`](#create-initdens)
 - [Create `final.dens`](#create-finaldens)
@@ -11,6 +11,8 @@ eleanorjackson
   - [Genus richness](#genus-richness)
   - [Canopy complexity](#canopy-complexity)
 - [Modelling?](#modelling)
+  - [`lme4`](#lme4)
+  - [`glmmTMB`](#glmmtmb)
 
 ``` r
 library("tidyverse")
@@ -18,6 +20,7 @@ library("patchwork")
 library("lme4")
 library("broom.mixed")
 library("emmeans")
+library("glmmTMB")
 ```
 
 Attempting to get the the net, complementarity, and selection effects of
@@ -962,6 +965,8 @@ result_cens %>%
 
 # Modelling?
 
+## `lme4`
+
 Try some quick models
 
 ``` r
@@ -1158,3 +1163,163 @@ my_coef_tab2 %>%
 ```
 
 ![](figures/2026-03-19_densize-package/unnamed-chunk-47-1.png)
+
+## `glmmTMB`
+
+``` r
+m_NE <- 
+  glmmTMB(net ~ 0 + treatment + (1 |species_mix), 
+             data_mod2,
+             family = t_family) 
+
+m_CE <- 
+  glmmTMB(compl ~ 0 + treatment + (1 |species_mix), 
+             data_mod2,
+             family = t_family) 
+
+m_CE_size <- 
+  glmmTMB(size.compl ~ 0 + treatment + (1 |species_mix), 
+             data_mod2,
+             family = t_family) 
+
+m_CE_dens <- 
+  glmmTMB(dens.compl ~ 0 + treatment + (1 |species_mix), 
+             data_mod2,
+             family = t_family) 
+
+m_SE <- 
+  glmmTMB(selec ~ 0 + treatment + (1 |species_mix), 
+             data_mod2,
+             family = t_family) 
+
+m_SE_size <- 
+  glmmTMB(size.selec ~ 0 + treatment + (1 |species_mix), 
+             data_mod2,
+             family = t_family) 
+
+m_SE_dens <- 
+  glmmTMB(dens.selec ~ 0 + treatment + (1 |species_mix), 
+             data_mod2,
+             family = t_family) 
+```
+
+Getting singular fits for all the selection effect models
+
+``` r
+my_coef_tab3 <-
+  tibble(fit = list(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
+         model = c("m_NE", "m_CE", "m_CE_size", 
+                   "m_CE_dens", "m_SE", "m_SE_size", "m_SE_dens")) %>%
+  mutate(tidy = purrr::map(
+    fit,
+    tidy,
+    effects = "fixed",
+    conf.int = TRUE
+  )) %>%
+  unnest(tidy) %>% 
+  mutate(term = fct_relevel(term, 
+                            "treatment4-species", 
+                            "treatment16-species",
+                            "treatment16-species-cut"))
+```
+
+``` r
+my_coef_tab3 %>% 
+  ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  labs(x = "Term",
+       y = "Estimate ± CI [95%]") +
+  geom_hline(yintercept = 0,  color = "blue") +
+  coord_flip() +
+  facet_wrap(~model, ncol = 1)
+```
+
+![](figures/2026-03-19_densize-package/unnamed-chunk-50-1.png)
+
+``` r
+m_NE <- 
+  glmmTMB(net ~ treatment * census + (1 |species_mix) + (1 |plot), 
+             data_mod2,
+             family = t_family) 
+
+m_CE <- 
+  glmmTMB(compl ~ treatment * census + (1 |species_mix) + (1 |plot), 
+          data_mod2,
+          family = t_family) 
+
+m_CE_size <- 
+  glmmTMB(size.compl ~ treatment * census + (1 |species_mix) + (1 |plot),
+          data_mod2,
+          family = t_family) 
+
+m_CE_dens <- 
+  glmmTMB(dens.compl ~ treatment * census + (1 |species_mix) + (1 |plot), 
+          data_mod2,
+          family = t_family) 
+
+m_SE <- 
+  glmmTMB(selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+          data_mod2,
+          family = t_family) 
+
+m_SE_size <- 
+  glmmTMB(size.selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+          data_mod2,
+          family = t_family) 
+
+m_SE_dens <- 
+  glmmTMB(dens.selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+          data_mod2,
+          family = t_family) 
+```
+
+``` r
+my_coef_tab4 <-
+  tibble(fit = list(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
+         model = c("m_NE", "m_CE", "m_CE_size", 
+                   "m_CE_dens", "m_SE", "m_SE_size", "m_SE_dens")) %>%
+  mutate(tidy = purrr::map(
+    fit,
+    emmeans,
+    ~ treatment * census,
+    type = "response"
+  )) %>%
+  mutate(tidy = purrr::map(
+    tidy,
+    as_tibble
+  )) %>%
+  unnest(tidy) %>% 
+  mutate(treatment = fct_relevel(treatment, 
+                            "4-species", 
+                            "16-species",
+                            "16-species-cut"))
+```
+
+``` r
+delta_emmeans <- 
+  my_coef_tab4 %>% 
+  select( - fit) %>% 
+  pivot_wider(names_from = census, 
+              id_cols = c("treatment", "model"),
+              values_from = c("emmean", "asymp.LCL", "asymp.UCL")) %>% 
+  mutate(emmean = emmean_03 - emmean_02,
+         asymp.LCL = asymp.LCL_03 - asymp.LCL_02,
+         asymp.UCL = asymp.UCL_03 - asymp.UCL_02,
+         census = "delta, 03 - 02") %>% 
+  select(model, treatment, census, emmean, asymp.LCL, asymp.UCL)
+```
+
+``` r
+my_coef_tab4 %>% 
+  select(model, treatment, census, emmean, asymp.LCL, asymp.UCL) %>% 
+  bind_rows(delta_emmeans) %>% 
+  ggplot(aes(x = treatment, y = emmean, ymin = asymp.LCL, ymax = asymp.UCL)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  labs(x = "Treatment",
+       y = "Estimated marginal means [95%]") +
+  geom_hline(yintercept = 0,  color = "blue") +
+  coord_flip() +
+  facet_wrap(model~census, scales = "free_x", ncol = 3)
+```
+
+![](figures/2026-03-19_densize-package/unnamed-chunk-54-1.png)
