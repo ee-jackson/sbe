@@ -57,7 +57,8 @@ library("densize")
 
 ```{r}
 data <- 
-  readRDS(here::here("data", "derived", "data_cleaned.rds")) 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  filter(cohort == 1)
 
 taxa <- 
   read_csv(here::here("data", "derived", "taxonomy.csv")) %>% 
@@ -69,6 +70,7 @@ init_dens <-
   data %>% 
   filter(census_id == "full_measurement_01") %>% 
   group_by(plot, genus_species) %>% 
+  arrange(plot, genus_species) %>% 
   summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
@@ -88,9 +90,9 @@ glimpse(init_dens)
 final_dens <- 
   data %>% 
   filter(census_id == "full_measurement_03") %>% 
-  filter(survival == 1) %>% 
   group_by(plot, genus_species) %>% 
-  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
+  summarise(n = sum(survival), .groups = "drop") %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -109,10 +111,10 @@ glimpse(final_dens)
 final_yield <- 
   data %>% 
   filter(census_id == "full_measurement_03") %>% 
-  filter(survival == 1) %>% 
   mutate(dbase_m = dbase_mm / 1000) %>% 
   mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
   group_by(plot, genus_species) %>% 
+  arrange(plot, genus_species) %>% 
   summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
@@ -237,7 +239,7 @@ dens_size %>%
   ggplot(aes(x = dens, y = size, colour = treatment)) +
   geom_point() +
   geom_text(data = 
-              filter(dens_size, size > 0.015 | dens > 300),
+              filter(dens_size, size > 0.015 | dens > 150),
             aes(label = plot),
             position = position_nudge(y = -0.001) ) +
   labs(y = "Plant size (mean basal area per plant m2)",
@@ -246,20 +248,6 @@ dens_size %>%
 ```
 
 No clear density-size pattern!
-
-Taking a look at which species are included in those outlier plots:
-
-```{r}
-data %>%
-  filter(plot == "114" |
-           plot == "065" |
-           plot == "001" |
-           plot == "002" |
-           plot == "004") %>% 
-  select(plot, treatment, genus_species) %>% 
-  distinct()
-  
-```
 
 
 ## Biodiversity effects over time
@@ -275,6 +263,7 @@ init_dens_01 <-
   filter(census_id == "full_measurement_01") %>% 
   group_by(plot, genus_species) %>% 
   summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -285,9 +274,9 @@ init_dens_01 <-
 final_dens_02 <- 
   data %>% 
   filter(census_id == "full_measurement_02") %>% 
-  filter(survival == 1) %>% 
   group_by(plot, genus_species) %>% 
-  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  summarise(n = sum(survival), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -298,11 +287,11 @@ final_dens_02 <-
 final_yield_02 <- 
   data %>% 
   filter(census_id == "full_measurement_02") %>% 
-  filter(survival == 1) %>% 
   mutate(dbase_m = dbase_mm / 1000) %>% 
   mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
   group_by(plot, genus_species) %>% 
   summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = sum) %>% 
@@ -333,6 +322,7 @@ init_dens_02 <-
   filter(census_id == "full_measurement_02") %>% 
   group_by(plot, genus_species) %>% 
   summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -343,9 +333,9 @@ init_dens_02 <-
 final_dens_03 <- 
   data %>% 
   filter(census_id == "full_measurement_03") %>% 
-  filter(survival == 1) %>% 
   group_by(plot, genus_species) %>% 
-  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  summarise(n = sum(survival), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -356,11 +346,11 @@ final_dens_03 <-
 final_yield_03 <- 
   data %>% 
   filter(census_id == "full_measurement_03") %>% 
-  filter(survival == 1) %>% 
   mutate(dbase_m = dbase_mm / 1000) %>% 
   mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
   group_by(plot, genus_species) %>% 
   summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = sum) %>% 
@@ -928,25 +918,25 @@ data_mod2 <-
 ```{r}
 #| warning: true
 m_NE <- 
-  lme4::lmer(net ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(net ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_CE <- 
-  lme4::lmer(compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(compl ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_CE_size <- 
-  lme4::lmer(size.compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(size.compl ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_CE_dens <- 
-  lme4::lmer(dens.compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(dens.compl ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_SE <- 
-  lme4::lmer(selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(selec ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_SE_size <- 
-  lme4::lmer(size.selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(size.selec ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_SE_dens <- 
-  lme4::lmer(dens.selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(dens.selec ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 ```
 
 
@@ -1041,8 +1031,6 @@ m_SE_dens <-
              family = t_family) 
 ```
 
-Getting singular fits for all the selection effect models
-
 ```{r}
 my_coef_tab3 <-
   tibble(fit = list(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
@@ -1077,37 +1065,37 @@ my_coef_tab3 %>%
 ```{r}
 #| warning: true
 m_NE <- 
-  glmmTMB(net ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(net ~ treatment * census + (1 | species_mix:plot), 
              data_mod2,
              family = t_family) 
 
 m_CE <- 
-  glmmTMB(compl ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(compl ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
 
 m_CE_size <- 
-  glmmTMB(size.compl ~ treatment * census + (1 |species_mix) + (1 |plot),
+  glmmTMB(size.compl ~ treatment * census + (1 | species_mix:plot),
           data_mod2,
           family = t_family) 
 
 m_CE_dens <- 
-  glmmTMB(dens.compl ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(dens.compl ~ treatment * census + (1 | species_mix:plot) ,
           data_mod2,
           family = t_family) 
 
 m_SE <- 
-  glmmTMB(selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(selec ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
 
 m_SE_size <- 
-  glmmTMB(size.selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(size.selec ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
 
 m_SE_dens <- 
-  glmmTMB(dens.selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(dens.selec ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
 ```
@@ -1161,5 +1149,5 @@ my_coef_tab4 %>%
        y = "Estimated marginal means [95%]") +
   geom_hline(yintercept = 0,  color = "blue") +
   coord_flip() +
-  facet_wrap(model~census, scales = "free_x", ncol = 3)
+  facet_wrap(model~census, ncol = 3)
 ```

@@ -1,6 +1,6 @@
 # Partitioning density and size components of biodiversity effects
 eleanorjackson
-2026-03-30
+2026-03-31
 
 - [Create `init.dens`](#create-initdens)
 - [Create `final.dens`](#create-finaldens)
@@ -59,7 +59,8 @@ per area).
 
 ``` r
 data <- 
-  readRDS(here::here("data", "derived", "data_cleaned.rds")) 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  filter(cohort == 1)
 
 taxa <- 
   read_csv(here::here("data", "derived", "taxonomy.csv")) %>% 
@@ -71,6 +72,7 @@ init_dens <-
   data %>% 
   filter(census_id == "full_measurement_01") %>% 
   group_by(plot, genus_species) %>% 
+  arrange(plot, genus_species) %>% 
   summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
@@ -109,9 +111,9 @@ glimpse(init_dens)
 final_dens <- 
   data %>% 
   filter(census_id == "full_measurement_03") %>% 
-  filter(survival == 1) %>% 
   group_by(plot, genus_species) %>% 
-  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
+  summarise(n = sum(survival), .groups = "drop") %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -126,22 +128,22 @@ glimpse(final_dens)
 
     Rows: 112
     Columns: 16
-    $ Dipterocarpus_conformis <int> 70, 0, 7, 0, 8, 0, 0, 10, 0, 0, 14, 16, 0, 13,…
-    $ Dryobalanops_lanceolata <int> 96, 0, 19, 0, 17, 0, 0, 5, 0, 128, 21, 42, 0, …
-    $ Hopea_sangal            <int> 85, 0, 12, 481, 24, 47, 0, 30, 108, 0, 17, 0, …
-    $ Shorea_macrophylla      <int> 67, 0, 12, 0, 13, 0, 0, 6, 3, 0, 4, 0, 0, 7, 9…
-    $ Shorea_beccariana       <int> 0, 385, 12, 0, 9, 0, 0, 7, 0, 0, 6, 0, 0, 8, 2…
-    $ Hopea_ferruginea        <int> 0, 0, 22, 0, 4, 86, 0, 8, 28, 0, 26, 0, 0, 6, …
-    $ Parashorea_malaanonan   <int> 0, 0, 19, 0, 19, 0, 0, 20, 0, 0, 15, 0, 0, 23,…
-    $ Parashorea_tomentella   <int> 0, 0, 24, 0, 25, 0, 0, 18, 0, 0, 23, 37, 0, 11…
-    $ Shorea_argentifolia     <int> 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 8, 0, 0, 1, 3, 0…
-    $ Shorea_faguetiana       <int> 0, 0, 2, 0, 2, 0, 0, 1, 0, 0, 5, 0, 0, 1, 1, 0…
-    $ Shorea_gibbosa          <int> 0, 0, 9, 0, 6, 13, 0, 3, 0, 0, 9, 0, 55, 4, 4,…
-    $ Shorea_johorensis       <int> 0, 0, 20, 0, 23, 0, 0, 22, 0, 0, 21, 47, 0, 18…
-    $ Shorea_leprosula        <int> 0, 0, 6, 0, 10, 0, 57, 3, 0, 0, 11, 0, 0, 8, 4…
-    $ Shorea_macroptera       <int> 0, 0, 9, 0, 9, 20, 0, 10, 0, 0, 8, 0, 0, 20, 5…
-    $ Shorea_ovalis           <int> 0, 0, 21, 0, 9, 0, 0, 9, 0, 0, 13, 0, 0, 17, 1…
-    $ Shorea_parvifolia       <int> 0, 0, 4, 0, 6, 0, 0, 4, 7, 0, 5, 0, 0, 5, 6, 0…
+    $ Dipterocarpus_conformis <dbl> 70, 0, 7, 0, 8, 0, 0, 10, 0, 0, 14, 16, 0, 13,…
+    $ Dryobalanops_lanceolata <dbl> 31, 0, 4, 0, 6, 0, 0, 1, 0, 17, 4, 10, 0, 4, 4…
+    $ Hopea_sangal            <dbl> 85, 0, 12, 255, 10, 47, 0, 17, 48, 0, 17, 0, 0…
+    $ Shorea_macrophylla      <dbl> 38, 0, 4, 0, 6, 0, 0, 5, 3, 0, 3, 0, 0, 4, 1, …
+    $ Shorea_beccariana       <dbl> 0, 205, 12, 0, 7, 0, 0, 6, 0, 0, 6, 0, 0, 5, 2…
+    $ Hopea_ferruginea        <dbl> 0, 0, 2, 0, 2, 7, 0, 1, 4, 0, 1, 0, 0, 1, 4, 0…
+    $ Parashorea_malaanonan   <dbl> 0, 0, 8, 0, 4, 0, 0, 11, 0, 0, 4, 0, 0, 7, 1, …
+    $ Parashorea_tomentella   <dbl> 0, 0, 7, 0, 6, 0, 0, 5, 0, 0, 9, 10, 0, 7, 7, …
+    $ Shorea_argentifolia     <dbl> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0…
+    $ Shorea_faguetiana       <dbl> 0, 0, 2, 0, 1, 0, 0, 1, 0, 0, 4, 0, 0, 0, 0, 0…
+    $ Shorea_gibbosa          <dbl> 0, 0, 5, 0, 2, 4, 0, 1, 0, 0, 2, 0, 23, 3, 1, …
+    $ Shorea_johorensis       <dbl> 0, 0, 6, 0, 5, 0, 0, 8, 0, 0, 5, 10, 0, 6, 3, …
+    $ Shorea_leprosula        <dbl> 0, 0, 3, 0, 1, 0, 20, 1, 0, 0, 4, 0, 0, 4, 0, …
+    $ Shorea_macroptera       <dbl> 0, 0, 3, 0, 3, 7, 0, 1, 0, 0, 1, 0, 0, 2, 1, 0…
+    $ Shorea_ovalis           <dbl> 0, 0, 21, 0, 4, 0, 0, 5, 0, 0, 12, 0, 0, 11, 4…
+    $ Shorea_parvifolia       <dbl> 0, 0, 3, 0, 4, 0, 0, 2, 5, 0, 0, 0, 0, 2, 2, 0…
 
 # Create `final.yield`
 
@@ -149,10 +151,10 @@ glimpse(final_dens)
 final_yield <- 
   data %>% 
   filter(census_id == "full_measurement_03") %>% 
-  filter(survival == 1) %>% 
   mutate(dbase_m = dbase_mm / 1000) %>% 
   mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
   group_by(plot, genus_species) %>% 
+  arrange(plot, genus_species) %>% 
   summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
@@ -169,21 +171,21 @@ glimpse(final_yield)
     Rows: 112
     Columns: 16
     $ Dipterocarpus_conformis <dbl> 0.259095416, 0.000000000, 0.016450551, 0.00000…
-    $ Dryobalanops_lanceolata <dbl> 0.295162123, 0.000000000, 0.033694920, 0.00000…
-    $ Hopea_sangal            <dbl> 0.85706200, 0.00000000, 0.05385986, 0.97681950…
-    $ Shorea_macrophylla      <dbl> 3.26965891, 0.00000000, 0.11301091, 0.00000000…
-    $ Shorea_beccariana       <dbl> 0.000000000, 2.120669269, 0.177934159, 0.00000…
-    $ Hopea_ferruginea        <dbl> 0.0000000000, 0.0000000000, 0.0799620291, 0.00…
-    $ Parashorea_malaanonan   <dbl> 0.000000000, 0.000000000, 0.038769019, 0.00000…
-    $ Parashorea_tomentella   <dbl> 0.000000000, 0.000000000, 0.041547323, 0.00000…
-    $ Shorea_argentifolia     <dbl> 0.0000000000, 0.0000000000, 0.0141026094, 0.00…
+    $ Dryobalanops_lanceolata <dbl> 0.1555110767, 0.0000000000, 0.0208873814, 0.00…
+    $ Hopea_sangal            <dbl> 0.854934493, 0.000000000, 0.053859863, 0.80178…
+    $ Shorea_macrophylla      <dbl> 2.706094456, 0.000000000, 0.049882619, 0.00000…
+    $ Shorea_beccariana       <dbl> 0.0000000000, 1.7255832612, 0.1779341589, 0.00…
+    $ Hopea_ferruginea        <dbl> 0.0000000000, 0.0000000000, 0.0088749384, 0.00…
+    $ Parashorea_malaanonan   <dbl> 0.0000000000, 0.0000000000, 0.0195270168, 0.00…
+    $ Parashorea_tomentella   <dbl> 0.000000000, 0.000000000, 0.010953286, 0.00000…
+    $ Shorea_argentifolia     <dbl> 0.00000000, 0.00000000, 0.00000000, 0.00000000…
     $ Shorea_faguetiana       <dbl> 0.0000000000, 0.0000000000, 0.0019938923, 0.00…
-    $ Shorea_gibbosa          <dbl> 0.000000000, 0.000000000, 0.011692073, 0.00000…
-    $ Shorea_johorensis       <dbl> 0.00000000, 0.00000000, 0.05324520, 0.00000000…
-    $ Shorea_leprosula        <dbl> 0.000000000, 0.000000000, 0.099505771, 0.00000…
-    $ Shorea_macroptera       <dbl> 0.0000000000, 0.0000000000, 0.0068039828, 0.00…
-    $ Shorea_ovalis           <dbl> 0.00000000, 0.00000000, 0.16324853, 0.00000000…
-    $ Shorea_parvifolia       <dbl> 0.0000000000, 0.0000000000, 0.0827456726, 0.00…
+    $ Shorea_gibbosa          <dbl> 0.0000000000, 0.0000000000, 0.0085556838, 0.00…
+    $ Shorea_johorensis       <dbl> 0.0000000000, 0.0000000000, 0.0288331859, 0.00…
+    $ Shorea_leprosula        <dbl> 0.000000000, 0.000000000, 0.097108532, 0.00000…
+    $ Shorea_macroptera       <dbl> 0.0000000000, 0.0000000000, 0.0038163282, 0.00…
+    $ Shorea_ovalis           <dbl> 0.000000000, 0.000000000, 0.163248531, 0.00000…
+    $ Shorea_parvifolia       <dbl> 0.000000000, 0.000000000, 0.082204484, 0.00000…
 
 # Run function
 
@@ -216,15 +218,15 @@ glimpse(result)
 
     Rows: 80
     Columns: 9
-    $ dens.compl <dbl> 1.35505896, 0.36043854, 0.40540960, 0.21731195, 0.13462639,…
-    $ dens.selec <dbl> 0.03616328, -0.11432901, -0.01144327, -0.24130539, -0.04686…
-    $ size.compl <dbl> 1.929240655, 0.269758307, 0.092856783, 0.742280214, 0.04862…
-    $ size.selec <dbl> 0.8309713672, -0.0569433693, 0.0684097378, -0.4446343157, -…
+    $ dens.compl <dbl> 1.751045311, 0.291262702, 0.215187977, -0.033020498, 0.2341…
+    $ dens.selec <dbl> 0.141006822, 0.103946506, 0.011221746, 0.050569137, -0.0637…
+    $ size.compl <dbl> 1.30770687, -0.13503451, 0.05376755, -0.08889025, -0.029326…
+    $ size.selec <dbl> 0.392799815, 0.069543299, 0.078081405, 0.100812453, -0.1174…
     $ plot       <fct> 001, 003, 005, 006, 008, 009, 011, 012, 014, 015, 016, 017,…
     $ treatment  <fct> 4-species, 16-species, 16-species-cut, 4-species, 16-specie…
-    $ compl      <dbl> 3.28429961, 0.63019685, 0.49826638, 0.95959217, 0.18325251,…
-    $ selec      <dbl> 0.867134643, -0.171272382, 0.056966463, -0.685939709, -0.16…
-    $ net        <dbl> 4.151434253, 0.458924465, 0.555232847, 0.273652459, 0.02194…
+    $ compl      <dbl> 3.05875218, 0.15622819, 0.26895553, -0.12191075, 0.20483643…
+    $ selec      <dbl> 0.533806637, 0.173489805, 0.089303151, 0.151381590, -0.1811…
+    $ net        <dbl> 3.59255882, 0.32971799, 0.35825868, 0.02947084, 0.02364161,…
 
 # Plotting
 
@@ -314,7 +316,7 @@ dens_size %>%
   ggplot(aes(x = dens, y = size, colour = treatment)) +
   geom_point() +
   geom_text(data = 
-              filter(dens_size, size > 0.015 | dens > 300),
+              filter(dens_size, size > 0.015 | dens > 150),
             aes(label = plot),
             position = position_nudge(y = -0.001) ) +
   labs(y = "Plant size (mean basal area per plant m2)",
@@ -325,31 +327,6 @@ dens_size %>%
 ![](figures/2026-03-19_densize-package/unnamed-chunk-14-1.png)
 
 No clear density-size pattern!
-
-Taking a look at which species are included in those outlier plots:
-
-``` r
-data %>%
-  filter(plot == "114" |
-           plot == "065" |
-           plot == "001" |
-           plot == "002" |
-           plot == "004") %>% 
-  select(plot, treatment, genus_species) %>% 
-  distinct()
-```
-
-    # A tibble: 8 × 3
-      plot  treatment   genus_species          
-      <fct> <fct>       <fct>                  
-    1 001   4-species   Dryobalanops_lanceolata
-    2 001   4-species   Shorea_macrophylla     
-    3 001   4-species   Dipterocarpus_conformis
-    4 001   4-species   Hopea_sangal           
-    5 002   monoculture Shorea_beccariana      
-    6 004   monoculture Hopea_sangal           
-    7 065   monoculture Shorea_parvifolia      
-    8 114   monoculture Shorea_leprosula       
 
 ## Biodiversity effects over time
 
@@ -364,6 +341,7 @@ init_dens_01 <-
   filter(census_id == "full_measurement_01") %>% 
   group_by(plot, genus_species) %>% 
   summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -374,9 +352,9 @@ init_dens_01 <-
 final_dens_02 <- 
   data %>% 
   filter(census_id == "full_measurement_02") %>% 
-  filter(survival == 1) %>% 
   group_by(plot, genus_species) %>% 
-  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  summarise(n = sum(survival), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -387,11 +365,11 @@ final_dens_02 <-
 final_yield_02 <- 
   data %>% 
   filter(census_id == "full_measurement_02") %>% 
-  filter(survival == 1) %>% 
   mutate(dbase_m = dbase_mm / 1000) %>% 
   mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
   group_by(plot, genus_species) %>% 
   summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = sum) %>% 
@@ -422,6 +400,7 @@ init_dens_02 <-
   filter(census_id == "full_measurement_02") %>% 
   group_by(plot, genus_species) %>% 
   summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -432,9 +411,9 @@ init_dens_02 <-
 final_dens_03 <- 
   data %>% 
   filter(census_id == "full_measurement_03") %>% 
-  filter(survival == 1) %>% 
   group_by(plot, genus_species) %>% 
-  summarise(n = n_distinct(plant_id), .groups = "drop") %>% 
+  summarise(n = sum(survival), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = n) %>% 
@@ -445,11 +424,11 @@ final_dens_03 <-
 final_yield_03 <- 
   data %>% 
   filter(census_id == "full_measurement_03") %>% 
-  filter(survival == 1) %>% 
   mutate(dbase_m = dbase_mm / 1000) %>% 
   mutate(basal_area_m2 = pi * (dbase_m/2)^2) %>% 
   group_by(plot, genus_species) %>% 
   summarise(sum = sum(basal_area_m2, na.rm = TRUE), .groups = "drop") %>% 
+  arrange(plot, genus_species) %>% 
   pivot_wider(id_cols = plot,
               names_from = genus_species,
               values_from = sum) %>% 
@@ -483,15 +462,15 @@ result_cens <-
     Rows: 160
     Columns: 10
     $ census     <chr> "02", "02", "02", "02", "02", "02", "02", "02", "02", "02",…
-    $ dens.compl <dbl> 0.248408051, -0.006814508, 0.038841999, -0.026840657, 0.028…
-    $ dens.selec <dbl> -8.568370e-02, -8.964600e-03, -1.091363e-02, -9.503623e-03,…
-    $ size.compl <dbl> 0.81752641, 0.15143264, 0.10598530, 0.12157327, 0.10551430,…
-    $ size.selec <dbl> -2.743032e-02, 2.360767e-02, 6.642728e-03, -5.291699e-02, -…
+    $ dens.compl <dbl> 0.576534369, 0.098710356, 0.035317044, -0.019554071, 0.0813…
+    $ dens.selec <dbl> -0.1526963433, 0.0236775928, -0.0066962580, 0.0223269618, -…
+    $ size.compl <dbl> 0.605249856, 0.013762709, 0.094619572, 0.035469669, 0.06398…
+    $ size.selec <dbl> -0.1121894675, 0.0056267769, 0.0019439641, -0.0222767831, -…
     $ plot       <fct> 001, 003, 005, 006, 008, 009, 011, 012, 014, 015, 016, 017,…
     $ treatment  <fct> 4-species, 16-species, 16-species-cut, 4-species, 16-specie…
-    $ compl      <dbl> 1.065934457, 0.144618132, 0.144827297, 0.094732615, 0.13381…
-    $ selec      <dbl> -0.1131140203, 0.0146430671, -0.0042709001, -0.0624206133, …
-    $ net        <dbl> 0.95282044, 0.15926120, 0.14055640, 0.03231200, 0.07224543,…
+    $ compl      <dbl> 1.181784225, 0.112473065, 0.129936616, 0.015915597, 0.14529…
+    $ selec      <dbl> -2.648858e-01, 2.930437e-02, -4.752294e-03, 5.017874e-05, -…
+    $ net        <dbl> 0.91689841, 0.14177743, 0.12518432, 0.01596578, 0.07385203,…
 
 ``` r
 delta <- 
@@ -515,7 +494,7 @@ result_cens %>%
   ggtitle("Net biodiversity effect")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-18-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-17-1.png)
 
 ``` r
 result %>% 
@@ -524,15 +503,15 @@ result %>%
 
     Rows: 1
     Columns: 9
-    $ dens.compl <dbl> 1.355059
-    $ dens.selec <dbl> 0.03616328
-    $ size.compl <dbl> 1.929241
-    $ size.selec <dbl> 0.8309714
+    $ dens.compl <dbl> 1.751045
+    $ dens.selec <dbl> 0.1410068
+    $ size.compl <dbl> 1.307707
+    $ size.selec <dbl> 0.3927998
     $ plot       <fct> 001
     $ treatment  <fct> 4-species
-    $ compl      <dbl> 3.2843
-    $ selec      <dbl> 0.8671346
-    $ net        <dbl> 4.151434
+    $ compl      <dbl> 3.058752
+    $ selec      <dbl> 0.5338066
+    $ net        <dbl> 3.592559
 
 The big outlier in the above figure is plot 1, with these 4 species:
 
@@ -565,7 +544,7 @@ result_cens %>%
   facet_wrap(~treatment)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-21-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-20-1.png)
 
 Selection and complementarity effects increase in magnitude over time.
 
@@ -597,7 +576,7 @@ result_cens %>%
   plot_layout(ncol = 1)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-22-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-21-1.png)
 
 ## Genus richness
 
@@ -657,7 +636,7 @@ result %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-25-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-24-1.png)
 
 ``` r
 result %>% 
@@ -679,7 +658,7 @@ result %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-26-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-25-1.png)
 
 ``` r
 result %>% 
@@ -701,7 +680,7 @@ result %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-27-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-26-1.png)
 
 ``` r
 result_cens %>% 
@@ -720,7 +699,7 @@ result_cens %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-28-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-27-1.png)
 
 ``` r
 result_cens %>% 
@@ -737,7 +716,7 @@ result_cens %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-29-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-28-1.png)
 
 ``` r
 result_cens %>% 
@@ -770,7 +749,7 @@ result_cens %>%
   plot_annotation(title = "Genus richness")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-30-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-29-1.png)
 
 ## Canopy complexity
 
@@ -838,7 +817,7 @@ result %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-32-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-31-1.png)
 
 ``` r
 result %>% 
@@ -863,7 +842,7 @@ result %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-33-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-32-1.png)
 
 ``` r
 result %>% 
@@ -888,7 +867,7 @@ result %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-34-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-33-1.png)
 
 ``` r
 result_cens %>% 
@@ -908,7 +887,7 @@ result_cens %>%
   plot_annotation(title = "Canopy complexity") 
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-35-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-34-1.png)
 
 ``` r
 result_cens %>% 
@@ -926,7 +905,7 @@ result_cens %>%
   plot_annotation(title = "Canopy complexity")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-36-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-35-1.png)
 
 ``` r
 result_cens %>% 
@@ -961,7 +940,7 @@ result_cens %>%
   plot_annotation(title = "Canopy complexity")
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-37-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-36-1.png)
 
 # Modelling?
 
@@ -999,7 +978,7 @@ data_mod %>%
   ggplot(aes(x = dens.selec)) + geom_density() 
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-39-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-38-1.png)
 
 Some long tails - suggests a student’s T response distribution may be
 better but will try Gaussian first.
@@ -1069,7 +1048,7 @@ my_coef_tab %>%
   facet_wrap(~model, ncol = 1)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-42-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-41-1.png)
 
 Let’s try using the 2 time points
 
@@ -1083,36 +1062,26 @@ data_mod2 <-
 
 ``` r
 m_NE <- 
-  lme4::lmer(net ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(net ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_CE <- 
-  lme4::lmer(compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(compl ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_CE_size <- 
-  lme4::lmer(size.compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(size.compl ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_CE_dens <- 
-  lme4::lmer(dens.compl ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(dens.compl ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
 m_SE <- 
-  lme4::lmer(selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
-```
+  lme4::lmer(selec ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
-    boundary (singular) fit: see help('isSingular')
-
-``` r
 m_SE_size <- 
-  lme4::lmer(size.selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
-```
+  lme4::lmer(size.selec ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 
-    boundary (singular) fit: see help('isSingular')
-
-``` r
 m_SE_dens <- 
-  lme4::lmer(dens.selec ~ treatment * census + (1 |species_mix) + (1 |plot), data_mod2) 
+  lme4::lmer(dens.selec ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 ```
-
-    boundary (singular) fit: see help('isSingular')
 
 ``` r
 my_coef_tab2 <-
@@ -1162,7 +1131,7 @@ my_coef_tab2 %>%
   facet_wrap(model~census, scales = "free_x", ncol = 3)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-47-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-46-1.png)
 
 ## `glmmTMB`
 
@@ -1203,8 +1172,6 @@ m_SE_dens <-
              family = t_family) 
 ```
 
-Getting singular fits for all the selection effect models
-
 ``` r
 my_coef_tab3 <-
   tibble(fit = list(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
@@ -1234,41 +1201,41 @@ my_coef_tab3 %>%
   facet_wrap(~model, ncol = 1)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-50-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-49-1.png)
 
 ``` r
 m_NE <- 
-  glmmTMB(net ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(net ~ treatment * census + (1 | species_mix:plot), 
              data_mod2,
              family = t_family) 
 
 m_CE <- 
-  glmmTMB(compl ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(compl ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
 
 m_CE_size <- 
-  glmmTMB(size.compl ~ treatment * census + (1 |species_mix) + (1 |plot),
+  glmmTMB(size.compl ~ treatment * census + (1 | species_mix:plot),
           data_mod2,
           family = t_family) 
 
 m_CE_dens <- 
-  glmmTMB(dens.compl ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(dens.compl ~ treatment * census + (1 | species_mix:plot) ,
           data_mod2,
           family = t_family) 
 
 m_SE <- 
-  glmmTMB(selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(selec ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
 
 m_SE_size <- 
-  glmmTMB(size.selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(size.selec ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
 
 m_SE_dens <- 
-  glmmTMB(dens.selec ~ treatment * census + (1 |species_mix) + (1 |plot), 
+  glmmTMB(dens.selec ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
 ```
@@ -1319,7 +1286,7 @@ my_coef_tab4 %>%
        y = "Estimated marginal means [95%]") +
   geom_hline(yintercept = 0,  color = "blue") +
   coord_flip() +
-  facet_wrap(model~census, scales = "free_x", ncol = 3)
+  facet_wrap(model~census, ncol = 3)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-54-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-53-1.png)
