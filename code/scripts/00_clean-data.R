@@ -101,38 +101,14 @@ data_sbe <-
 
 data_sbe <-
   data_sbe %>%
-  filter(census_id != "intensive_01") %>% # this is a duplicate
+  # we only want full censuses
+  filter(str_detect(census_id, "full_measurement")) %>%
   mutate(census_no = case_when(
     census_id == "full_measurement_01" ~ "01",
-    census_id == "intensive_02" ~ "02",
-    census_id == "intensive_03" ~ "03",
-    census_id == "intensive_04" ~ "04",
-    census_id == "intensive_05" ~ "05",
-    census_id == "intensive_06" ~ "06",
-    census_id == "intensive_07" ~ "07",
-    census_id == "full_measurement_02" ~ "08",
-    census_id == "climber_01" ~ "09",
-    census_id == "climber_02" ~ "10",
-    census_id == "climber_03" ~ "11",
-    census_id == "climber_04" ~ "12",
-    census_id == "climber_05" ~ "13",
-    census_id == "climber_06" ~ "14",
-    census_id == "climber_07" ~ "15",
-    census_id == "climber_08" ~ "16",
-    census_id == "climber_09" ~ "17",
-    census_id == "climber_10" ~ "18",
-    census_id == "climber_11" ~ "19",
-    census_id == "intensive_08" ~ "20",
-    census_id == "climber_12" ~ "21",
-    census_id == "intensive_09" ~ "22",
-    census_id == "climber_13" ~ "23",
-    census_id == "climber_14" ~ "24",
-    census_id == "intensive_10" ~ "25",
-    census_id == "full_measurement_03" ~ "26",
+    census_id == "full_measurement_02" ~ "02",
+    census_id == "full_measurement_03" ~ "03",
     .default = census_id
-  )) %>%
-  # we only want full censuses
-  filter(str_detect(census_id, "full_measurement"))
+  ))
 
 
 # Clean survey date -------------------------------------------------------
