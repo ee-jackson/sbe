@@ -939,6 +939,10 @@ m_SE_dens <-
   lme4::lmer(dens.selec ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 ```
 
+Check `summary()` of one example:
+```{r}
+summary(m_NE)
+```
 
 ```{r}
 my_coef_tab2 <-
@@ -987,7 +991,7 @@ my_coef_tab2 %>%
        y = "Estimated marginal means [95%]") +
   geom_hline(yintercept = 0,  color = "blue") +
   coord_flip() +
-  facet_wrap(model~census, scales = "free_x", ncol = 3)
+  facet_wrap(model~census, ncol = 3)
 ```
 
 
@@ -1098,6 +1102,11 @@ m_SE_dens <-
   glmmTMB(dens.selec ~ treatment * census + (1 | species_mix:plot), 
           data_mod2,
           family = t_family) 
+```
+
+Check `summary()` of one example:
+```{r}
+summary(m_NE)
 ```
 
 

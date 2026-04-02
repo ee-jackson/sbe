@@ -1,6 +1,6 @@
 # Partitioning density and size components of biodiversity effects
 eleanorjackson
-2026-03-31
+2026-04-02
 
 - [Create `init.dens`](#create-initdens)
 - [Create `final.dens`](#create-finaldens)
@@ -1083,6 +1083,45 @@ m_SE_dens <-
   lme4::lmer(dens.selec ~ treatment * census + (1 | species_mix:plot), data_mod2) 
 ```
 
+Check `summary()` of one example:
+
+``` r
+summary(m_NE)
+```
+
+    Linear mixed model fit by REML ['lmerMod']
+    Formula: net ~ treatment * census + (1 | species_mix:plot)
+       Data: data_mod2
+
+    REML criterion at convergence: 119.3
+
+    Scaled residuals: 
+        Min      1Q  Median      3Q     Max 
+    -2.2058 -0.3012 -0.0027  0.1501  8.3140 
+
+    Random effects:
+     Groups           Name        Variance Std.Dev.
+     species_mix:plot (Intercept) 0.06242  0.2498  
+     Residual                     0.06583  0.2566  
+    Number of obs: 160, groups:  species_mix:plot, 80
+
+    Fixed effects:
+                                      Estimate Std. Error t value
+    (Intercept)                      -0.003133   0.063306  -0.049
+    treatment16-species               0.002542   0.089528   0.028
+    treatment16-species-cut           0.006921   0.109648   0.063
+    census03                         -0.023364   0.064142  -0.364
+    treatment16-species:census03     -0.092533   0.090710  -1.020
+    treatment16-species-cut:census03  0.046598   0.111097   0.419
+
+    Correlation of Fixed Effects:
+                (Intr) trt16- tr16-- cnss03 t16-:0
+    trtmnt16-sp -0.707                            
+    trtmnt16-s- -0.577  0.408                     
+    census03    -0.507  0.358  0.292              
+    trtmn16-:03  0.358 -0.507 -0.207 -0.707       
+    trtm16--:03  0.292 -0.207 -0.507 -0.577  0.408
+
 ``` r
 my_coef_tab2 <-
   tibble(fit = c(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
@@ -1128,10 +1167,10 @@ my_coef_tab2 %>%
        y = "Estimated marginal means [95%]") +
   geom_hline(yintercept = 0,  color = "blue") +
   coord_flip() +
-  facet_wrap(model~census, scales = "free_x", ncol = 3)
+  facet_wrap(model~census, ncol = 3)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-46-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-47-1.png)
 
 ## `glmmTMB`
 
@@ -1201,7 +1240,7 @@ my_coef_tab3 %>%
   facet_wrap(~model, ncol = 1)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-49-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-50-1.png)
 
 ``` r
 m_NE <- 
@@ -1239,6 +1278,39 @@ m_SE_dens <-
           data_mod2,
           family = t_family) 
 ```
+
+Check `summary()` of one example:
+
+``` r
+summary(m_NE)
+```
+
+     Family: t  ( identity )
+    Formula:          net ~ treatment * census + (1 | species_mix:plot)
+    Data: data_mod2
+
+          AIC       BIC    logLik -2*log(L)  df.resid 
+       -113.8     -86.2      65.9    -131.8       151 
+
+    Random effects:
+
+    Conditional model:
+     Groups           Name        Variance Std.Dev.
+     species_mix:plot (Intercept) 0.002931 0.05413 
+    Number of obs: 160, groups:  species_mix:plot, 80
+
+    Dispersion estimate for t family (sigma^2): 0.00416 
+
+    Conditional model:
+                                      Estimate Std. Error z value Pr(>|z|)    
+    (Intercept)                      -0.031750   0.016183  -1.962   0.0498 *  
+    treatment16-species               0.016516   0.023512   0.702   0.4824    
+    treatment16-species-cut           0.021706   0.029043   0.747   0.4548    
+    census03                         -0.135069   0.024021  -5.623 1.88e-08 ***
+    treatment16-species:census03     -0.026999   0.036969  -0.730   0.4652    
+    treatment16-species-cut:census03  0.002504   0.056783   0.044   0.9648    
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 ``` r
 my_coef_tab4 <-
@@ -1289,4 +1361,4 @@ my_coef_tab4 %>%
   facet_wrap(model~census, ncol = 3)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-53-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-55-1.png)
