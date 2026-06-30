@@ -11,9 +11,20 @@
 library("tidyverse")
 library("here")
 library("janitor")
+library("zen4R")
 
 
 # Get data ----------------------------------------------------------------
+
+# download SBE data from Zenodo
+zen4R::download_zenodo(
+  doi = "https://doi.org/10.5281/zenodo.10815814",
+  path = here::here(
+    "data",
+    "raw",
+    "sbe"
+  )
+)
 
 data_sbe <-
   read_csv(
