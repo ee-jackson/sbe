@@ -1,6 +1,6 @@
 # Partitioning density and size components of biodiversity effects
 eleanorjackson
-2026-04-02
+2026-06-30
 
 - [Create `init.dens`](#create-initdens)
 - [Create `final.dens`](#create-finaldens)
@@ -1313,52 +1313,89 @@ summary(m_NE)
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 ``` r
+mods_tbl <-
+  tibble(
+    fit = list(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
+    model = c("m_NE", "m_CE", "m_CE_size",
+              "m_CE_dens", "m_SE", "m_SE_size", "m_SE_dens")
+  )
+```
+
+``` r
+# Estimated marginal means for each treatment x census cell
 my_coef_tab4 <-
-  tibble(fit = list(m_NE, m_CE, m_CE_size, m_CE_dens, m_SE, m_SE_size, m_SE_dens),
-         model = c("m_NE", "m_CE", "m_CE_size", 
-                   "m_CE_dens", "m_SE", "m_SE_size", "m_SE_dens")) %>%
-  mutate(tidy = purrr::map(
-    fit,
-    emmeans,
-    ~ treatment * census,
-    type = "response"
-  )) %>%
-  mutate(tidy = purrr::map(
-    tidy,
-    as_tibble
-  )) %>%
-  unnest(tidy) %>% 
-  mutate(treatment = fct_relevel(treatment, 
-                            "4-species", 
-                            "16-species",
-                            "16-species-cut"))
+  mods_tbl %>%
+  mutate(
+    emm = purrr::map(
+      fit,
+      ~ emmeans(.x, ~ treatment * census, type = "response")
+    ),
+    tidy = purrr::map(emm, as_tibble)
+  ) %>%
+  select(model, fit, emm, tidy) %>%
+  unnest(tidy) %>%
+  mutate(
+    treatment = fct_relevel(
+      treatment,
+      "4-species",
+      "16-species",
+      "16-species-cut"
+    )
+  )
 ```
 
 ``` r
-delta_emmeans <- 
-  my_coef_tab4 %>% 
-  select( - fit) %>% 
-  pivot_wider(names_from = census, 
-              id_cols = c("treatment", "model"),
-              values_from = c("emmean", "asymp.LCL", "asymp.UCL")) %>% 
-  mutate(emmean = emmean_03 - emmean_02,
-         asymp.LCL = asymp.LCL_03 - asymp.LCL_02,
-         asymp.UCL = asymp.UCL_03 - asymp.UCL_02,
-         census = "delta, 03 - 02") %>% 
-  select(model, treatment, census, emmean, asymp.LCL, asymp.UCL)
+# Model-based census difference within each treatment: 03 - 02
+delta_emmeans <-
+  mods_tbl %>%
+  mutate(
+    delta = purrr::map(
+      fit,
+      ~ emmeans(.x, ~ census | treatment, type = "response") %>%
+          contrast(method = "revpairwise") %>% 
+          confint() %>%
+          as_tibble()
+    )
+  ) %>%
+  select(model, delta) %>%
+  unnest(delta) %>%
+  mutate(
+    treatment = fct_relevel(
+      treatment,
+      "4-species",
+      "16-species",
+      "16-species-cut"
+    ),
+    census = "delta, 03 - 02"
+  )
 ```
 
 ``` r
-my_coef_tab4 %>% 
-  select(model, treatment, census, emmean, asymp.LCL, asymp.UCL) %>% 
-  bind_rows(delta_emmeans) %>% 
+plot_tab <-
+  my_coef_tab4 %>%
+  select(model, treatment, census, emmean, asymp.LCL, asymp.UCL) %>%
+  bind_rows(
+    delta_emmeans %>%
+      transmute(
+        model,
+        treatment,
+        census,
+        emmean = estimate,
+        asymp.LCL = asymp.LCL,
+        asymp.UCL = asymp.UCL
+      )
+  )
+```
+
+``` r
+plot_tab %>%
   ggplot(aes(x = treatment, y = emmean, ymin = asymp.LCL, ymax = asymp.UCL)) +
   geom_pointrange(shape = 21, fill = "white") +
   labs(x = "Treatment",
-       y = "Estimated marginal means [95%]") +
-  geom_hline(yintercept = 0,  color = "blue") +
+       y = "Estimated marginal means [95% CI]") +
+  geom_hline(yintercept = 0, color = "blue") +
   coord_flip() +
-  facet_wrap(model~census, ncol = 3)
+  facet_wrap(model ~ census, ncol = 3)
 ```
 
-![](figures/2026-03-19_densize-package/unnamed-chunk-55-1.png)
+![](figures/2026-03-19_densize-package/unnamed-chunk-57-1.png)
