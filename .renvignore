@@ -1,2 +1,9 @@
 *
-!/code/scripts
+!code/
+code/*
+!code/scripts/
+code/scripts/*
+!code/scripts/**
+!code/functions/
+code/functions/*
+!code/functions/**
