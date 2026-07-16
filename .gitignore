@@ -4,6 +4,9 @@ data/
 code/notebooks/*html
 code/notebooks/**/*pdf
 
+## Positron / VS Code ignores
+.vscode
+
 ## R + RStudio ignores:
 
 # History files
