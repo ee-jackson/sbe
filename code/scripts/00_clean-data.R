@@ -11,6 +11,7 @@ library("tidyverse")
 library("here")
 library("janitor")
 library("zen4R")
+library("WorldFlora")
 
 
 # Get data ----------------------------------------------------------------
@@ -484,6 +485,57 @@ data_backfilled <-
 	inner_join(x = data_backfilled, y = sp_lists)
 
 
+# Get new species names --------------------------------------------------
+
+# download world flora data from Zenodo
+zen4R::download_zenodo(
+	doi = "https://doi.org/10.5281/zenodo.20782718",
+	files = "_DwC_backbone_R.zip",
+	path = here::here("data", "raw")
+)
+
+utils::unzip(
+	here::here("data", "raw", "_DwC_backbone_R.zip"),
+	exdir = here::here("data", "raw")
+)
+
+WFO.one(
+	WFO.file = here::here("data", "raw", "classification.csv"),
+)
+
+orig_sp <-
+	data_backfilled |>
+	select(genus_species) |>
+	distinct() |>
+	mutate(old_name = str_replace(genus_species, "_", " "))
+
+wfo <-
+	WFO.match(
+		spec.data = as.data.frame(orig_sp),
+		WFO.file = here::here("data", "raw", "classification.csv"),
+		no.dates = TRUE,
+		spec.name = "old_name"
+	)
+
+# finds one unique matching name for each submitted name
+wfo_sp <-
+	wfo |>
+	WFO.one(priority = "Accepted") |>
+	select(
+		genus_species,
+		scientificName,
+		scientificNameAuthorship
+	)
+
+write_csv(wfo_sp, here::here("data", "derived", "species_list.csv"))
+
+data_backfilled <-
+	data_backfilled |>
+	left_join(wfo_sp) %>%
+	mutate(
+		genus_species = str_replace(scientificName, " ", "_")
+	)
+
 # Save --------------------------------------------------------------------
 
 data_backfilled <-
@@ -496,8 +548,6 @@ data_backfilled <-
 		line,
 		position,
 		cohort,
-		genus,
-		species,
 		genus_species,
 		planting_date,
 		first_survey,
