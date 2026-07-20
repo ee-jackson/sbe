@@ -1,0 +1,150 @@
+# Preliminary results report
+eleanorjackson
+2026-06-30
+
+- [Main question](#main-question)
+- [Possible framing for the
+  introduction](#possible-framing-for-the-introduction)
+- [Methods](#methods)
+- [Results](#results)
+- [Possible framing for the
+  discussion](#possible-framing-for-the-discussion)
+
+***“No evidence for positive complementarity after two decades in a
+tropical tree diversity restoration experiment.”***
+
+I’d like to aim for *Biotropica* for this one, what do you think?
+
+### Main question
+
+Do tree species mixtures in a recovering tropical forest become more
+productive than expected from monocultures after two decades, and are
+any diversity effects driven by tree survival/density or individual tree
+size?
+
+## Possible framing for the introduction
+
+1.  Tropical forests are being restored at large scales. Enrichment
+    planting with more species is assumed to improve recovery compared
+    to single species planting. But the evidence from long-term studies
+    is still thin.
+
+2.  BEF theory predicts positive effects but much evidence comes from
+    grasslands or shorter-lived systems. Introduce selection and
+    complementarity effects plus size / density components.
+
+3.  Negative biodiversity effects in recovering forests may indicate
+    that mixtures have not yet developed the conditions needed for
+    coexistence. In early stages, species may be competing for similar
+    light environments, dominant species may suppress neighbours before
+    vertical or spatial niche differentiation emerges, or mixtures may
+    include species combinations with mismatched growth strategies
+
+4.  The SBE is a rare opportunity to test these ideas in a large and
+    long term forest restoration setting.
+
+5.  Here we test: (1) whether planted mixtures show positive or negative
+    net biodiversity effects through time; (2) whether these effects are
+    attributable to complementarity, selection, or both; and (3) whether
+    biodiversity effects are driven primarily by changes in tree density
+    or by changes in individual tree size
+
+## Methods
+
+1.  SBE set up and censusing
+
+2.  We applied methods from [Tatsumi & Loreau
+    2023](https://doi.org/10.1111/ele.14300).
+
+3.  We fit separate generalized linear mixed models for each
+    biodiversity-effect response with the formula
+    `biodiversity_effect ~ treatment * census + (1 | species_mix:plot)`
+    where:
+
+- `treatment` is a factor: either 4-species mix, 16-species mix or
+  16-species mix with climber cutting
+- `census` is a factor: the biodiversity effect between census 1 and
+  census 2, or between census 2 and census 3
+- `species_mix` is a factor: the specific mix of species, one of 17
+- `plot` is a factor: one of 80
+- `biodiversity_effect` is one of:
+  - the net biodiversity effect
+  - the complementarity effect
+  - the selection effect
+  - the complementarity effect (size component)
+  - the complementarity effect (density component)
+  - the selection effect (size component)
+  - the selection effect (density component)
+
+  The `treatment * census` term includes the main effects of `treatment`
+  and `census` and their interaction, so it tests both whether
+  biodiversity effects differed among treatments, whether they changed
+  between censuses, and whether the size of the treatment effect
+  depended on census. I included `(1 | species_mix:plot)` as a random
+  intercept to account for the non-independence of repeated observations
+  from the same experimental unit.
+
+4.  We used `emmeans` to estimate model-based marginal means for each
+    treatment-by-census combination and to derive contrasts representing
+    the change in biodiversity effects between censuses within each
+    treatment. This gives a simple summary of how each modelled
+    biodiversity-effect response changed through time within each
+    treatment.
+
+## Results
+
+1.  Overall, biodiversity effects became more negative between census 2
+    and census 3. This pattern was strongest for the net biodiversity
+    effect and the complementarity effect, whereas selection effects
+    were generally weaker and more variable among treatments.
+
+2.  In census 2, net effects were close to zero, whereas by census 3 all
+    treatments showed negative net effects, with model-estimated changes
+    from census 2 to census 3 below zero in the 4-species, 16-species,
+    and 16-species-cut treatments. This decline was primarily associated
+    with increasingly negative complementarity effects.
+
+3.  The decomposition of complementarity effects indicated the temporal
+    decline was driven largely by the size component – trees in mixtures
+    were smaller than expected from monoculture performance
+
+4.  Selection effects were generally smaller and more variable than
+    complementarity effects
+
+5.  Still to do: treatment contrasts to test whether treatments differ
+    from each other – but from eyeballing it looks like there is not
+    much difference
+
+<div id="fig-1">
+
+<img src="figures/2026-03-19_densize-package/unnamed-chunk-57-1.png"
+width="700" />
+
+Figure 1: Estimated marginal means (± 95% confidence intervals) for the
+net biodiversity effect (NE), complementarity effect (CE), selection
+effect (SE), and the size- and density-dependent components of CE and SE
+across treatments and censuses. Points show model-estimated means from
+separate generalized linear mixed models. Panels labelled “delta, 03 −
+02” show the model-based change between censuses within each treatment.
+The horizontal blue line indicates zero, such that values above zero
+represent positive biodiversity effects and values below zero represent
+negative biodiversity effects.
+
+</div>
+
+## Possible framing for the discussion
+
+1.  biodiversity effects are negative and increasingly so over 20 years
+
+2.  effects are driven more by size than by density
+
+3.  positive complementarity is thought to emerge slowly in forests, but
+    not yet evident here after 2 decades
+
+4.  our study suggests that diverse enrichment planting doesn’t provide
+    productivity gains in the short term, but diversity is likely still
+    important for resilience, future recruitment, canopy complexity
+    e.t.c.
+
+5.  longer censuses are essential because BEF effects may change as
+    canopies close and vertical stratification develops
