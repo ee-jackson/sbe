@@ -1,0 +1,156 @@
+---
+title: "Results report"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+format:
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+	fig.path = paste0(
+		"figures/",
+		sub("\\.rmarkdown$", "", basename(file_name)),
+		"/",
+		sep = ""
+	)
+)
+set.seed(20654)
+
+source(here::here("code", "functions", "plotting.R"))
+ggplot2::theme_set(theme_sbe())
+```
+
+```{r packages}
+library("tidyverse")
+library("patchwork")
+library("here")
+library("gt")
+```
+
+```{r data}
+data <-
+	readRDS(here::here("data", "derived", "data_cleaned.rds"))
+```
+
+# Summed basal diameter
+
+```{r}
+seedling_ba <-
+	data |>
+	filter(survival == 1) |> # only alive seedlings
+	mutate(dbase_m = dbase_mm / 1000) |>
+	mutate(basal_area = pi * (dbase_m / 2)^2) |>
+	group_by(plot, census_yr, treatment) |>
+	summarise(sum_basal_area = sum(basal_area, na.rm = TRUE), .groups = "drop")
+```
+
+```{r}
+seedling_ba |>
+	ggplot(aes(
+		x = census_yr,
+		y = sum_basal_area,
+		colour = treatment
+	)) +
+	geom_boxplot() +
+	labs(y = "Summed basal area m2", x = "Census year") +
+	scale_colour_sbe()
+```
+
+Remember _n plots_ for liana cut plots is smaller than other treatments.
+Calcluate per ha:
+
+```{r}
+seedling_ba |>
+	filter(census_yr == "2023-2024") |>
+	group_by(treatment) |>
+	summarise(
+		sum_basal_area = sum(sum_basal_area, na.rm = TRUE),
+		n_plots = n_distinct(plot)
+	) |>
+	mutate(basal_area_per_ha = (sum_basal_area / n_plots) / 4) |> # 1 plot is 4ha
+	gt::gt()
+```
+
+# Net biodiversity effects
+
+```{r}
+biodiv_data <-
+	readRDS(here::here("data", "derived", "biodiv_effects.rds"))
+```
+
+```{r}
+biodiv_data |>
+	ggplot(aes(x = treatment, y = net, colour = treatment)) +
+	geom_boxplot(outliers = FALSE) +
+	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+	geom_hline(yintercept = 0, linetype = 2) +
+	scale_colour_sbe() +
+	ggtitle("Net biodiversity effect")
+```
+
+# Selection and complementarity effects
+
+```{r}
+biodiv_data |>
+	ggplot(aes(x = treatment, y = selec, colour = treatment)) +
+	geom_boxplot(outliers = FALSE) +
+	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+	geom_hline(yintercept = 0, linetype = 2) +
+	scale_colour_sbe() +
+	ggtitle("Selection effect") +
+
+	biodiv_data |>
+		ggplot(aes(x = treatment, y = compl, colour = treatment)) +
+	geom_boxplot(outliers = FALSE) +
+	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+	geom_hline(yintercept = 0, linetype = 2) +
+	scale_colour_sbe() +
+	ggtitle("Complementarity effect")
+```
+
+## Selection - size and density
+
+```{r}
+biodiv_data |>
+	ggplot(aes(x = treatment, y = size_selec, colour = treatment)) +
+	geom_boxplot(outliers = FALSE) +
+	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+	geom_hline(yintercept = 0, linetype = 2) +
+	scale_colour_sbe() +
+	ggtitle("Selection effect - size") +
+
+	biodiv_data |>
+		ggplot(aes(x = treatment, y = dens_selec, colour = treatment)) +
+	geom_boxplot(outliers = FALSE) +
+	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+	geom_hline(yintercept = 0, linetype = 2) +
+	scale_colour_sbe() +
+	ggtitle("Selection effect - density")
+```
+## Complementarity - size and density
+
+```{r}
+biodiv_data |>
+	ggplot(aes(x = treatment, y = size_compl, colour = treatment)) +
+	geom_boxplot(outliers = FALSE) +
+	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+	geom_hline(yintercept = 0, linetype = 2) +
+	scale_colour_sbe() +
+	ggtitle("Complementarity effect - size") +
+
+	biodiv_data |>
+		ggplot(aes(x = treatment, y = dens_compl, colour = treatment)) +
+	geom_boxplot(outliers = FALSE) +
+	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
+	geom_hline(yintercept = 0, linetype = 2) +
+	scale_colour_sbe() +
+	ggtitle("Complementarity effect - density")
+```
