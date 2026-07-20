@@ -4,6 +4,14 @@ data/
 code/notebooks/*html
 code/notebooks/**/*pdf
 
+## Microsoft Office ignores
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xlsx
+*.xls
+
 ## Positron / VS Code ignores
 .vscode
 
