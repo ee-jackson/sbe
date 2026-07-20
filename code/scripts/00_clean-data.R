@@ -590,7 +590,6 @@ data_backfilled <-
 	filter(!if_all(c(survival, dbh_mm, dbase_mm, height_apex), is.na)) |>
 	filter(!str_detect(plant_id, "NA")) |>
 	filter(!is.na(genus_species)) |>
-	filter(treatment != "16-species-cut") |> # not using liana-cut plots
 	mutate(across(
 		c(
 			treatment,
@@ -605,6 +604,15 @@ data_backfilled <-
 			census_yr
 		),
 		as.factor
-	))
+	)) |>
+	mutate(
+		treatment = fct_relevel(
+			treatment,
+			"1-species",
+			"4-species",
+			"16-species",
+			"16-species-cut"
+		)
+	)
 
 saveRDS(data_backfilled, here::here("data", "derived", "data_cleaned.rds"))
