@@ -15,6 +15,9 @@ code/notebooks/**/*pdf
 ## Positron / VS Code ignores
 .vscode
 
+## Quarto
+.quarto/
+
 ## R + RStudio ignores:
 
 # History files
