@@ -3,8 +3,10 @@ title: "Results report"
 author: 'eleanorjackson'
 date: '`r format(Sys.time(), "%d %B, %Y")`'
 format:
-  gfm:
-    toc: true
+    gfm:
+        toc: true
+    typst:
+        toc: true
 editor: source
 execute:
   warning: false
@@ -28,11 +30,12 @@ source(here::here("code", "functions", "plotting.R"))
 ggplot2::theme_set(theme_sbe())
 ```
 
+Boxplot figures of basal area and output data from the [`densize`](https://doi.org/10.1111/ele.14300) package.
+
 ```{r packages}
 library("tidyverse")
 library("patchwork")
 library("here")
-library("gt")
 ```
 
 ```{r data}
@@ -40,7 +43,7 @@ data <-
 	readRDS(here::here("data", "derived", "data_cleaned.rds"))
 ```
 
-# Summed basal diameter
+# Summed basal diameter plots
 
 ```{r}
 seedling_ba <-
@@ -48,9 +51,18 @@ seedling_ba <-
 	filter(survival == 1) |> # only alive seedlings
 	mutate(dbase_m = dbase_mm / 1000) |>
 	mutate(basal_area = pi * (dbase_m / 2)^2) |>
-	group_by(plot, census_yr, treatment) |>
+	group_by(
+		plot,
+		census_yr,
+		species_mix,
+		treatment,
+		generic_diversity,
+		struc_complexity
+	) |>
 	summarise(sum_basal_area = sum(basal_area, na.rm = TRUE), .groups = "drop")
 ```
+
+## Planting treatment
 
 ```{r}
 seedling_ba |>
@@ -61,7 +73,8 @@ seedling_ba |>
 	)) +
 	geom_boxplot() +
 	labs(y = "Summed basal area m2", x = "Census year") +
-	scale_colour_sbe()
+	scale_colour_sbe() +
+	ggtitle("Summed basal area of planted seedlings per plot in 3rd full census")
 ```
 
 Remember _n plots_ for liana cut plots is smaller than other treatments.
@@ -75,11 +88,69 @@ seedling_ba |>
 		sum_basal_area = sum(sum_basal_area, na.rm = TRUE),
 		n_plots = n_distinct(plot)
 	) |>
-	mutate(basal_area_per_ha = (sum_basal_area / n_plots) / 4) |> # 1 plot is 4ha
-	gt::gt()
+	# 1 plot is 4ha
+	mutate(basal_area_per_ha = (sum_basal_area / n_plots) / 4)
 ```
 
-# Net biodiversity effects
+## Structural canopy complexity + generic diversity
+
+```{r}
+seedling_ba |>
+	filter(census_yr == "2023-2024") |>
+	filter(treatment == "4-species") |>
+	ggplot(aes(
+		x = struc_complexity,
+		y = sum_basal_area,
+		colour = treatment
+	)) +
+	geom_boxplot() +
+	labs(y = "Summed basal area m2", x = "Structural canopy complexity") +
+	scale_colour_sbe() +
+	ggtitle(
+		"Summed basal area of planted seedlings per plot in 3rd full census"
+	) +
+	seedling_ba |>
+		filter(census_yr == "2023-2024") |>
+		filter(treatment == "4-species") |>
+		ggplot(aes(
+			x = generic_diversity,
+			y = sum_basal_area,
+			colour = treatment
+		)) +
+	geom_boxplot() +
+	labs(y = "Summed basal area m2", x = "Generic diversity") +
+	scale_colour_sbe() +
+	plot_layout(guides = "collect")
+```
+
+```{r}
+seedling_ba |>
+	filter(census_yr == "2023-2024") |>
+	filter(treatment == "4-species") |>
+	summarise(
+		median_ba = median(sum_basal_area, na.rm = TRUE),
+		q1 = quantile(sum_basal_area, 0.25, na.rm = TRUE),
+		q3 = quantile(sum_basal_area, 0.75, na.rm = TRUE),
+		.by = c(generic_diversity, struc_complexity)
+	) |>
+	mutate(tile_label = sprintf("%.1f\nIQR: %.1f–%.1f", median_ba, q1, q3)) |>
+	ggplot(aes(
+		x = generic_diversity,
+		y = struc_complexity,
+		fill = median_ba
+	)) +
+	geom_tile() +
+	geom_text(
+		aes(label = tile_label),
+		size = 6,
+		colour = "white"
+	) +
+	labs(fill = "Median basal area")
+```
+
+# Biodiversity effects
+
+## Net biodiversity effects
 
 ```{r}
 biodiv_data <-
@@ -96,7 +167,7 @@ biodiv_data |>
 	ggtitle("Net biodiversity effect")
 ```
 
-# Selection and complementarity effects
+## Selection and complementarity effects
 
 ```{r}
 biodiv_data |>
@@ -106,14 +177,14 @@ biodiv_data |>
 	geom_hline(yintercept = 0, linetype = 2) +
 	scale_colour_sbe() +
 	ggtitle("Selection effect") +
-
 	biodiv_data |>
 		ggplot(aes(x = treatment, y = compl, colour = treatment)) +
 	geom_boxplot(outliers = FALSE) +
 	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
 	geom_hline(yintercept = 0, linetype = 2) +
 	scale_colour_sbe() +
-	ggtitle("Complementarity effect")
+	ggtitle("Complementarity effect") +
+	plot_layout(guides = "collect")
 ```
 
 ## Selection - size and density
@@ -126,15 +197,16 @@ biodiv_data |>
 	geom_hline(yintercept = 0, linetype = 2) +
 	scale_colour_sbe() +
 	ggtitle("Selection effect - size") +
-
 	biodiv_data |>
 		ggplot(aes(x = treatment, y = dens_selec, colour = treatment)) +
 	geom_boxplot(outliers = FALSE) +
 	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
 	geom_hline(yintercept = 0, linetype = 2) +
 	scale_colour_sbe() +
-	ggtitle("Selection effect - density")
+	ggtitle("Selection effect - density") +
+	plot_layout(guides = "collect")
 ```
+
 ## Complementarity - size and density
 
 ```{r}
@@ -145,12 +217,12 @@ biodiv_data |>
 	geom_hline(yintercept = 0, linetype = 2) +
 	scale_colour_sbe() +
 	ggtitle("Complementarity effect - size") +
-
 	biodiv_data |>
 		ggplot(aes(x = treatment, y = dens_compl, colour = treatment)) +
 	geom_boxplot(outliers = FALSE) +
 	geom_jitter(width = 0.25, shape = 16, alpha = 0.5) +
 	geom_hline(yintercept = 0, linetype = 2) +
 	scale_colour_sbe() +
-	ggtitle("Complementarity effect - density")
+	ggtitle("Complementarity effect - density") +
+	plot_layout(guides = "collect")
 ```
