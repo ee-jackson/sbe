@@ -555,6 +555,64 @@ data_backfilled <-
 		genus_species = str_replace(scientificName, " ", "_")
 	)
 
+# Add structural complexity and genus diversity cols ---------------------
+
+data_backfilled <-
+	data_backfilled |>
+	mutate(
+		struc_complexity = case_when(
+			species_mix %in%
+				c(
+					"4-species(1)",
+					"4-species(2)",
+					"4-species(3)",
+					"4-species(4)"
+				) ~ "low",
+			species_mix %in%
+				c(
+					"4-species(5)",
+					"4-species(6)",
+					"4-species(7)",
+					"4-species(8)",
+					"4-species(9)",
+					"4-species(10)",
+					"4-species(11)",
+					"4-species(12)",
+					"4-species(13)",
+					"4-species(14)",
+					"4-species(15)",
+					"4-species(16)"
+				) ~ "high",
+			.default = NA
+		),
+		generic_diversity = case_when(
+			species_mix %in%
+				c(
+					"4-species(1)",
+					"4-species(2)",
+					"4-species(3)",
+					"4-species(4)",
+					"4-species(5)",
+					"4-species(6)",
+					"4-species(7)",
+					"4-species(8)"
+				) ~ "2-genera",
+			species_mix %in%
+				c(
+					"4-species(9)",
+					"4-species(10)",
+					"4-species(11)",
+					"4-species(12)",
+					"4-species(13)",
+					"4-species(14)",
+					"4-species(15)",
+					"4-species(16)"
+				) ~ "4-genera",
+			.default = NA
+		)
+	)
+
+
 # Save --------------------------------------------------------------------
 
 data_backfilled <-
@@ -571,6 +629,8 @@ data_backfilled <-
 		plant_id,
 		treatment,
 		species_mix,
+		struc_complexity,
+		generic_diversity,
 		plot,
 		line,
 		position,
@@ -592,14 +652,16 @@ data_backfilled <-
 	filter(!is.na(genus_species)) |>
 	mutate(across(
 		c(
+			plant_id,
 			treatment,
 			species_mix,
-			plant_id,
+			struc_complexity,
+			generic_diversity,
 			plot,
-			cohort,
-			genus_species,
 			line,
 			position,
+			cohort,
+			genus_species,
 			census_no,
 			census_yr
 		),
@@ -612,6 +674,11 @@ data_backfilled <-
 			"4-species",
 			"16-species",
 			"16-species-cut"
+		),
+		struc_complexity = fct_relevel(
+			struc_complexity,
+			"low",
+			"high"
 		)
 	)
 
