@@ -18,6 +18,9 @@ code/notebooks/**/*pdf
 ## Quarto
 .quarto/
 
+# used by Typst
+*svg
+
 ## R + RStudio ignores:
 
 # History files
