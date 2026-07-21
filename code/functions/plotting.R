@@ -43,8 +43,9 @@ theme_sbe <- function(
 		accent = accent
 	) +
 		ggplot2::theme(
-			palette.colour.discrete = "Okabe-Ito",
-			palette.fill.discrete = "Okabe-Ito",
+			geom = ggplot2::element_geom(pointshape = 16),
+			palette.colour.discrete = palette.colors(palette = "Okabe-Ito")[-1],
+			palette.fill.discrete = palette.colors(palette = "Okabe-Ito")[-1],
 			palette.colour.continuous = scales::pal_viridis(),
 			palette.fill.continuous = scales::pal_viridis(),
 			legend.position = "bottom"
