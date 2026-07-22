@@ -1,0 +1,10 @@
+date: today
+date-format: "DD MMMM, YYYY"
+format:
+  gfm:
+    toc: true
+  typst:
+    toc: true
+editor: source
+execute:
+  warning: false

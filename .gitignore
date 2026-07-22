@@ -17,6 +17,7 @@ code/notebooks/**/*pdf
 
 ## Quarto
 .quarto/
+_quarto.yml.local
 
 # used by Typst
 *svg
@@ -107,3 +108,6 @@ Temporary Items
 Backup[ ]of[ ]*.pages/
 Backup[ ]of[ ]*.key/
 Backup[ ]of[ ]*.numbers/
+
+/.quarto/
+**/*.quarto_ipynb
