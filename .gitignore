@@ -111,3 +111,5 @@ Backup[ ]of[ ]*.numbers/
 
 /.quarto/
 **/*.quarto_ipynb
+
+/_*.local
