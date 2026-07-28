@@ -104,6 +104,16 @@ I initially thought that this meant not all seedlings were replanted,
 however, some of the replanted seedlings might have died between planting
 (2009-2010) and their first census (the second full census of the SBE, 2011-2013).
 
+How many are still alive in census 3?
+
+```{r}
+data |>
+	filter(genus_species == "Dipterocarpus_conformis") |>
+	filter(survival == 1) |>
+	group_by(census_no) |>
+	summarise(n_distinct(plant_id))
+```
+
 Some figures comparing numbers of dead cohort 1 seedlings in the first census
 with numbers of cohort 2 seedlings in the second census:
 

@@ -1,6 +1,6 @@
 # *Dipterocarpus conformis* check
 eleanorjackson
-22 July, 2026
+28 July, 2026
 
 > “*Dipterocarpus conformis* seedlings were not available for
 > replanting, meaning this one species was not planted. Do we know: were
@@ -127,6 +127,23 @@ not all seedlings were replanted, however, some of the replanted
 seedlings might have died between planting (2009-2010) and their first
 census (the second full census of the SBE, 2011-2013).
 
+How many are still alive in census 3?
+
+``` r
+data |>
+    filter(genus_species == "Dipterocarpus_conformis") |>
+    filter(survival == 1) |>
+    group_by(census_no) |>
+    summarise(n_distinct(plant_id))
+```
+
+    # A tibble: 3 × 2
+      census_no `n_distinct(plant_id)`
+      <fct>                      <int>
+    1 01                          2192
+    2 02                          1007
+    3 03                           652
+
 Some figures comparing numbers of dead cohort 1 seedlings in the first
 census with numbers of cohort 2 seedlings in the second census:
 
@@ -169,7 +186,7 @@ dead_v_replant |>
     theme_sbe(base_size = 15)
 ```
 
-![](figures/2026-07-22_d-conformis/unnamed-chunk-8-1.png)
+![](figures/2026-07-22_d-conformis/unnamed-chunk-9-1.png)
 
 ``` r
 dead_v_replant |>
@@ -183,7 +200,7 @@ dead_v_replant |>
     theme(axis.text.x = element_text(angle = 90))
 ```
 
-![](figures/2026-07-22_d-conformis/unnamed-chunk-9-1.png)
+![](figures/2026-07-22_d-conformis/unnamed-chunk-10-1.png)
 
 ``` r
 dead_v_replant |>
@@ -197,4 +214,4 @@ dead_v_replant |>
     theme(axis.text.x = element_text(angle = 90))
 ```
 
-![](figures/2026-07-22_d-conformis/unnamed-chunk-10-1.png)
+![](figures/2026-07-22_d-conformis/unnamed-chunk-11-1.png)
