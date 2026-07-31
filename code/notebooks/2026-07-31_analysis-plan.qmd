@@ -1,0 +1,89 @@
+---
+title: "Analysis plan - SBE 2nd decade"
+execute:
+  enabled: false
+---
+
+```{r setup}
+#| include: false
+
+document_name <- tools::file_path_sans_ext(
+	basename(knitr::current_input())
+)
+
+knitr::opts_chunk$set(
+	fig.path = file.path("figures", document_name, "")
+)
+
+set.seed(as.numeric(Sys.Date()))
+
+source(here::here("code", "functions", "plotting.R"))
+ggplot2::theme_set(theme_sbe())
+```
+
+## Questions
+ - Q1: How does planted species richness affect plot development during the census-2-to-census-3 interval?
+ - Q2: Is any richness effect attributable to seedling density, size, or both?
+ - Q3: Are mixture effects driven by complementarity or selection?
+
+### Estimands:
+ - summed basal area per plot
+ - seedling density per plot
+ - complementarity effect: density
+ - complementarity effect: size
+ - selection effect: density
+ - selection effect: size
+
+### Covariates:
+ - block
+ - species mix / composition
+
+### Contrasts:
+ - 1-speices vs 4-species vs 16-species planting treatments
+ - 16-species vs 16-species plus enhanced liana cutting
+ - canopy complexity: high vs low (4-species plots only)
+ - generic richness: 2 vs 4 (4-species plots only)
+
+## 1. Descriptive full experiment figure
+- Figure showing planted seedling density and basal area for the full experiment over time (smoothed)
+- Annotated with key dates (e.g. planting, replanting and censusing)
+
+## 2. Basal area and density figures
+- Calculate plot-level basal area and seedling density at census 3 as descriptive summaries of current stand state
+- Draw figures to show differences between treatment contrasts (listed above)
+
+## 3. Biodiversity partitioning analysis
+
+We will use additive biodiversity partitioning following [Loreau & Hector (2001)](https://doi.org/10.1038/35083573) and [Tatsumi & Loreau (2023)](https://doi.org/10.1111/ele.14300). Because seedlings that were dead in census 1 were replanted between census 1 and census 2, the first two census intervals are not directly comparable in terms of cohort composition. We therefore use the **second full census as the baseline** for the partitioning analysis and compare it with the third full census. This allows us to focus on the **census-2-to-census-3 interval**, when the population structure is comparatively stable and the replanting complication has already been incorporated into the census-2 baseline.
+
+For each plot, we will calculate:
+
+- the net biodiversity effect
+- the complementarity effect
+- the selection effect
+- the density component
+- the size component
+
+We will then test:
+
+- whether each component differs from zero within the 4-species and 16-species treatments
+- whether the components differ between 4-species and 16-species treatments
+
+At one point, we questioned whether it is appropriate to model each component separately, given that the net biodiversity effect is the sum of the complementarity and selection effects, and these are themselves decomposed into density and size components. I don't think this is problematic, provided that these terms are treated as mechanistic decompositions of the total biodiversity effect rather than as independent tests of the same hypothesis. In other words, the response variables are mathematically dependent, but each model addresses a different biological question.
+
+This is how BEF studies typically present these analyses e.g. [Fargione _et al._ (2007)](https://doi.org/10.1098/rspb.2006.0351): First analysing the net biodiversity effect, then using the additive partition to explain whether any richness effect arises through complementarity or selection, and finally (with the Tatsumi partition) whether those effects are driven by density or size.
+
+For the statistical analysis we will use:
+
+```{r}
+partitioning_component ~ treatment + block + (1 | species_mix)
+```
+
+and, for the 4-species plots only:
+
+```{r}
+partitioning_component ~
+	structural_complexity * generic_richness + block + (1 | species_mix)
+```
+
+The 4-species analysis is treated as a separate, prespecified subanalysis because structural complexity and generic richness are only defined within that subset.
