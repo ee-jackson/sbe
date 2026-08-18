@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
-## Script: 01_calculate-biodiversity-effects.R
+## Script: calculate-biodiversity-effects.R
 ## Desc: Calculates the net, complementarity and selection effects of biodiversity
 ## Date created: 2026-07-17
 

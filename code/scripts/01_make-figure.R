@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
-## Script: 01_make-figure.R
+## Script: make-figure.R
 ## Desc: Draw a descriptive figure of the full experiment to date
 ## Date created: 2026-08-18
 
