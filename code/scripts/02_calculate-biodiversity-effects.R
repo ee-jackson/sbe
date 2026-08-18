@@ -19,6 +19,7 @@ data <-
 	readRDS(here::here("data", "derived", "data_cleaned.rds")) |>
 	filter(treatment != "16-species-cut") # not using liana-cut plots
 
+
 # Calculate the initial density ------------------------------------------
 
 # reconsructs the intended experimental planting allocation
@@ -107,7 +108,7 @@ final_yield <-
 
 densize_out <-
 	densize::densize(
-		init.dens = init_dens_perf,
+		init.dens = init_dens,
 		final.dens = final_dens,
 		final.yield = final_yield
 	) |>
