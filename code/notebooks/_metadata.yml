@@ -5,6 +5,7 @@ format:
     toc: true
   typst:
     toc: true
+keep-md: false
 editor: source
 execute:
   warning: false
