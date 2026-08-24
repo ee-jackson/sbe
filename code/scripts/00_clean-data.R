@@ -45,6 +45,7 @@ data_sbe <-
 		height_apex = heightapex
 	) |>
 	mutate(across(c(old_new, survival), str_trim)) |>
+	mutate(block = ifelse(pl < 65, "south", "north")) |>
 	mutate(
 		plot = ifelse(
 			is.na(pl),
@@ -92,6 +93,7 @@ data_sbe <-
 	) |>
 	select(
 		plant_id,
+		block,
 		plot,
 		species_mix,
 		line,
@@ -210,22 +212,30 @@ plants_in_plots <-
 # key to pass to backfilling function
 keys <-
 	data_sbe |>
-	select(census_id, census_no, plot_line) |>
+	select(census_id, census_no, block, plot_line) |>
 	distinct() |>
 	left_join(plants_in_plots, by = c("plot_line"))
 
 # function to backfill missing trees as dead
-backfill_trees <- function(census_name, census, plot_no, tree_ids, data) {
+backfill_trees <- function(
+	census_name,
+	census,
+	block_id,
+	plot_no,
+	tree_ids,
+	data
+) {
 	data |>
 		filter(
 			census_id == census_name,
 			census_no == census,
+			block == block_id,
 			plot_line == plot_no
 		) |>
 		full_join(tree_ids, by = "plant_id") |>
 		mutate(survival = replace_na(survival, 0)) |>
 		ungroup() |>
-		tidyr::fill(plot, census_id, census_no, plot_line)
+		tidyr::fill(block, plot, census_id, census_no, plot_line)
 }
 
 # run function over all keys
@@ -235,6 +245,7 @@ data_backfilled <-
 		.l = list(
 			census_name = keys$census_id,
 			census = keys$census_no,
+			block_id = keys$block,
 			plot_no = keys$plot_line,
 			tree_ids = keys$id_list
 		),
@@ -631,6 +642,7 @@ data_backfilled <-
 		species_mix,
 		struc_complexity,
 		generic_diversity,
+		block,
 		plot,
 		line,
 		position,
@@ -657,6 +669,7 @@ data_backfilled <-
 			species_mix,
 			struc_complexity,
 			generic_diversity,
+			block,
 			plot,
 			line,
 			position,

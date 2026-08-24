@@ -116,7 +116,14 @@ densize_out <-
 
 metadata <-
 	data |>
-	select(plot, treatment) |>
+	select(
+		block,
+		plot,
+		treatment,
+		species_mix,
+		struc_complexity,
+		generic_diversity
+	) |>
 	distinct() |>
 	filter(treatment != "1-species") |>
 	arrange(plot)
