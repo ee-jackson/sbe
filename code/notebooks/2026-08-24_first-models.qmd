@@ -338,8 +338,140 @@ purrr::walk2(
 
 Residuals looking much better!
 
-Printing output for all tmb models:
+## Try block as a random effect
+
+Block has only 2 levels, but we are not specifically interested in block so might be better to average over it -- allow information to be shared across blocks (partial pooling) -- with the understanding that the variance for the block random effect will be unreliable.
+
+Would rather generalise to a broader population than make
+specific comparisons between blocks.
 
 ```{r}
-models_tmb$fit
+models_rand_bl <- fit_models(
+	data = partitions,
+	formula = "~ 0 + treatment + (1|block)",
+	method = "glmmTMB"
+)
+```
+
+```{r}
+models_rand_bl |>
+	dplyr::filter(warning != "")
+```
+
+No warnings
+
+```{r}
+results_rand_bl <-
+	models_rand_bl |>
+	mutate(
+		tidy = purrr::map(
+			fit,
+			tidy,
+			effects = "fixed",
+			conf.int = TRUE
+		)
+	) |>
+	unnest(tidy) |>
+	mutate(
+		term = fct_relevel(
+			term,
+			"treatment4-species",
+			"treatment16-species"
+		)
+	)
+```
+
+```{r}
+#| fig-height: 6
+#| fig-width: 9
+
+results_tmb |>
+	ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+	geom_pointrange(shape = 21, fill = "white") +
+	labs(x = "Term", y = "Estimate ± CI [95%]") +
+	geom_hline(yintercept = 0, color = "blue") +
+	coord_flip() +
+	facet_wrap(~name, ncol = 1) +
+	ggtitle("glmmTMB - block fixed") +
+
+	results_rand_bl |>
+		ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+	geom_pointrange(shape = 21, fill = "white") +
+	labs(x = "Term", y = "Estimate ± CI [95%]") +
+	geom_hline(yintercept = 0, color = "blue") +
+	coord_flip() +
+	facet_wrap(~name, ncol = 1) +
+	ggtitle("glmmTMB - block random")
+```
+
+```{r}
+models_rand_bl <-
+	models_rand_bl |>
+	mutate(
+		resids = purrr::map(
+			fit,
+			DHARMa::simulateResiduals,
+			plot = FALSE
+		)
+	)
+```
+
+```{r}
+#| fig-height: 6
+#| fig-width: 9
+
+purrr::walk2(
+	models_rand_bl$resids,
+	models_rand_bl$name,
+	\(resids, name) plot(resids, title = name)
+)
+```
+
+## Intercept only models
+
+Is there a a biodiversity effect (regardless of treatment)?
+
+```{r}
+models_intercept <- fit_models(
+	data = partitions,
+	formula = "~ 1 + (1|block)",
+	method = "glmmTMB"
+)
+```
+
+
+```{r}
+results_intercept <-
+	models_intercept |>
+	filter(name %in% c("m_NE", "m_CE", "m_SE")) |>
+	mutate(
+		tidy = purrr::map(
+			fit,
+			tidy,
+			effects = "fixed",
+			conf.int = TRUE
+		)
+	) |>
+	unnest(tidy) |>
+	mutate(
+		name = fct_relevel(
+			name,
+			"m_NE",
+			"m_CE",
+			"m_SE"
+		)
+	)
+```
+
+```{r}
+#| fig-height: 6
+#| fig-width: 4.5
+
+results_intercept |>
+	ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+	geom_pointrange(shape = 21, fill = "white") +
+	labs(x = "Term", y = "Estimate ± CI [95%]") +
+	geom_hline(yintercept = 0, color = "blue") +
+	coord_flip() +
+	facet_wrap(~name, ncol = 1)
 ```

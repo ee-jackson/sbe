@@ -1,10 +1,12 @@
 # First models - SBE 2nd decade
 eleanorjackson
-25 August, 2026
+26 August, 2026
 
 - [`lmer` models](#lmer-models)
 - [`lm` models](#lm-models)
 - [`glmmTMB` models](#glmmtmb-models)
+- [Try block as a random effect](#try-block-as-a-random-effect)
+- [Intercept only models](#intercept-only-models)
 
 First step to fit:
 
@@ -378,134 +380,154 @@ purrr::walk2(
 
 Residuals looking much better!
 
-Printing output for all tmb models:
+## Try block as a random effect
+
+Block has only 2 levels, but we are not specifically interested in block
+so might be better to average over it – allow information to be shared
+across blocks (partial pooling) – with the understanding that the
+variance for the block random effect will be unreliable.
+
+Would rather generalise to a broader population than make specific
+comparisons between blocks.
 
 ``` r
-models_tmb$fit
+models_rand_bl <- fit_models(
+    data = partitions,
+    formula = "~ 0 + treatment + (1|block)",
+    method = "glmmTMB"
+)
 ```
 
-    $m_NE
-    Formula:          net ~ 0 + treatment + block
-    Data: data
-          AIC       BIC    logLik -2*log(L)  df.resid 
-     47.14568  57.94009 -18.57284  37.14568        59 
+``` r
+models_rand_bl |>
+    dplyr::filter(warning != "")
+```
 
-    Number of obs: 64
+    # A tibble: 0 × 4
+    # ℹ 4 variables: name <chr>, fit <named list>, singular <lgl>, warning <chr>
 
-    Dispersion estimate for t family (sigma^2): 0.0405 
+No warnings
 
-    Student-t df estimate: 2.27 
+``` r
+results_rand_bl <-
+    models_rand_bl |>
+    mutate(
+        tidy = purrr::map(
+            fit,
+            tidy,
+            effects = "fixed",
+            conf.int = TRUE
+        )
+    ) |>
+    unnest(tidy) |>
+    mutate(
+        term = fct_relevel(
+            term,
+            "treatment4-species",
+            "treatment16-species"
+        )
+    )
+```
 
-    Fixed Effects:
+``` r
+results_tmb |>
+    ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+    geom_pointrange(shape = 21, fill = "white") +
+    labs(x = "Term", y = "Estimate ± CI [95%]") +
+    geom_hline(yintercept = 0, color = "blue") +
+    coord_flip() +
+    facet_wrap(~name, ncol = 1) +
+    ggtitle("glmmTMB - block fixed") +
 
-    Conditional model:
-     treatment4-species  treatment16-species           blocksouth  
-               -0.21478             -0.18999              0.03641  
+    results_rand_bl |>
+        ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+    geom_pointrange(shape = 21, fill = "white") +
+    labs(x = "Term", y = "Estimate ± CI [95%]") +
+    geom_hline(yintercept = 0, color = "blue") +
+    coord_flip() +
+    facet_wrap(~name, ncol = 1) +
+    ggtitle("glmmTMB - block random")
+```
 
-    $m_CE
-    Formula:          compl ~ 0 + treatment + block
-    Data: data
-          AIC       BIC    logLik -2*log(L)  df.resid 
-     82.71632  93.51074 -36.35816  72.71632        59 
+![](figures/2026-08-24_first-models/unnamed-chunk-22-1.png)
 
-    Number of obs: 64
+``` r
+models_rand_bl <-
+    models_rand_bl |>
+    mutate(
+        resids = purrr::map(
+            fit,
+            DHARMa::simulateResiduals,
+            plot = FALSE
+        )
+    )
+```
 
-    Dispersion estimate for t family (sigma^2): 0.0749 
+``` r
+purrr::walk2(
+    models_rand_bl$resids,
+    models_rand_bl$name,
+    \(resids, name) plot(resids, title = name)
+)
+```
 
-    Student-t df estimate: 2.41 
+![](figures/2026-08-24_first-models/unnamed-chunk-24-1.png)
 
-    Fixed Effects:
+![](figures/2026-08-24_first-models/unnamed-chunk-24-2.png)
 
-    Conditional model:
-     treatment4-species  treatment16-species           blocksouth  
-              -0.193341            -0.033999            -0.004121  
+![](figures/2026-08-24_first-models/unnamed-chunk-24-3.png)
 
-    $m_CE_size
-    Formula:          size_compl ~ 0 + treatment + block
-    Data: data
-          AIC       BIC    logLik -2*log(L)  df.resid 
-     42.66234  53.45675 -16.33117  32.66234        59 
+![](figures/2026-08-24_first-models/unnamed-chunk-24-4.png)
 
-    Number of obs: 64
+![](figures/2026-08-24_first-models/unnamed-chunk-24-5.png)
 
-    Dispersion estimate for t family (sigma^2): 0.045 
+![](figures/2026-08-24_first-models/unnamed-chunk-24-6.png)
 
-    Student-t df estimate: 2.76 
+![](figures/2026-08-24_first-models/unnamed-chunk-24-7.png)
 
-    Fixed Effects:
+## Intercept only models
 
-    Conditional model:
-     treatment4-species  treatment16-species           blocksouth  
-               -0.02940              0.01770             -0.08799  
+Is there a a biodiversity effect (regardless of treatment)?
 
-    $m_CE_dens
-    Formula:          dens_compl ~ 0 + treatment + block
-    Data: data
-          AIC       BIC    logLik -2*log(L)  df.resid 
-    -18.89767  -8.10325  14.44883 -28.89767        59 
+``` r
+models_intercept <- fit_models(
+    data = partitions,
+    formula = "~ 1 + (1|block)",
+    method = "glmmTMB"
+)
+```
 
-    Number of obs: 64
+``` r
+results_intercept <-
+    models_intercept |>
+    filter(name %in% c("m_NE", "m_CE", "m_SE")) |>
+    mutate(
+        tidy = purrr::map(
+            fit,
+            tidy,
+            effects = "fixed",
+            conf.int = TRUE
+        )
+    ) |>
+    unnest(tidy) |>
+    mutate(
+        name = fct_relevel(
+            name,
+            "m_NE",
+            "m_CE",
+            "m_SE"
+        )
+    )
+```
 
-    Dispersion estimate for t family (sigma^2): 0.0203 
+``` r
+results_intercept |>
+    ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+    geom_pointrange(shape = 21, fill = "white") +
+    labs(x = "Term", y = "Estimate ± CI [95%]") +
+    geom_hline(yintercept = 0, color = "blue") +
+    coord_flip() +
+    facet_wrap(~name, ncol = 1)
+```
 
-    Student-t df estimate: 3.48 
-
-    Fixed Effects:
-
-    Conditional model:
-     treatment4-species  treatment16-species           blocksouth  
-               -0.12838             -0.02480              0.09146  
-
-    $m_SE
-    Formula:          selec ~ 0 + treatment + block
-    Data: data
-          AIC       BIC    logLik -2*log(L)  df.resid 
-    -11.72287  -0.92846  10.86144 -21.72287        59 
-
-    Number of obs: 64
-
-    Dispersion estimate for t family (sigma^2): 0.0129 
-
-    Student-t df estimate: 1.85 
-
-    Fixed Effects:
-
-    Conditional model:
-     treatment4-species  treatment16-species           blocksouth  
-             -8.995e-05           -9.628e-02           -1.203e-02  
-
-    $m_SE_size
-    Formula:          size_selec ~ 0 + treatment + block
-    Data: data
-          AIC       BIC    logLik -2*log(L)  df.resid 
-    -56.47047 -45.67606  33.23524 -66.47047        59 
-
-    Number of obs: 64
-
-    Dispersion estimate for t family (sigma^2): 0.00712 
-
-    Student-t df estimate: 2.02 
-
-    Fixed Effects:
-
-    Conditional model:
-     treatment4-species  treatment16-species           blocksouth  
-               0.002812            -0.050827             0.022321  
-
-    $m_SE_dens
-    Formula:          dens_selec ~ 0 + treatment + block
-    Data: data
-           AIC        BIC     logLik  -2*log(L)   df.resid 
-    -124.07817 -113.28376   67.03909 -134.07817         59 
-
-    Number of obs: 64
-
-    Dispersion estimate for t family (sigma^2): 0.00507 
-
-    Student-t df estimate:  5.9 
-
-    Fixed Effects:
-
-    Conditional model:
-     treatment4-species  treatment16-species           blocksouth  
-               -0.01410             -0.07512             -0.03077  
+![](figures/2026-08-24_first-models/unnamed-chunk-27-1.png)
