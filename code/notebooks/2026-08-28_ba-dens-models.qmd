@@ -1,0 +1,453 @@
+---
+title: "Basal area and density models"
+---
+
+```{r setup}
+#| include: false
+
+document_name <- tools::file_path_sans_ext(
+	basename(knitr::current_input())
+)
+
+knitr::opts_chunk$set(
+	fig.path = file.path("figures", document_name, "")
+)
+
+set.seed(20693)
+
+source(here::here("code", "functions", "plotting.R"))
+ggplot2::theme_set(theme_sbe())
+```
+
+I'm going to fit six models (as listed below) and create accompanying figures.
+
+1. Including all plots:
+
+- m1: `basal area ~ treatment + (1|block)`
+- m2: `seedling density ~ treatment + (1|block)`
+
+2. 16-species plots only:
+
+- m3: `basal area ~ liana cutting + (1|block)`
+- m4: `seedling density ~ liana cutting + (1|block)`
+
+3. 4-species plots only:
+
+- m5: `basal area ~ canopy complexity * generic richness + (1|block)`
+- m6: `seedling density ~ canopy complexity * generic richness + (1|block)`
+
+```{r}
+library("tidyverse")
+library("patchwork")
+library("glmmTMB")
+library("broom.mixed")
+library("DHARMa")
+library("ggdist")
+library("emmeans")
+```
+
+```{r}
+data_summed <-
+	readRDS(here::here("data", "derived", "data_cleaned.rds")) |>
+	filter(survival == 1) |> # only alive seedlings
+	filter(census_no == '03') |>
+	mutate(dbase_m = dbase_mm / 1000) |>
+	mutate(basal_area = pi * (dbase_m / 2)^2) |>
+	group_by(
+		plot,
+		block,
+		species_mix,
+		treatment,
+		generic_diversity,
+		struc_complexity
+	) |>
+	summarise(
+		sum_basal_area = sum(basal_area, na.rm = TRUE),
+		density = sum(survival, na.rm = TRUE),
+		.groups = "drop"
+	)
+```
+
+```{r}
+data_summed |>
+	ggplot(aes(x = sum_basal_area)) +
+	geom_density() +
+	data_summed |>
+		ggplot(aes(x = density)) +
+	geom_density()
+```
+
+Summed basal area is continuous and non-negative. If all values are positive and right-skewed, a Gamma model with a log link?
+
+For seedling density, probably negative binomial
+
+## 1. Including all plots
+
+```{r}
+data_summed |>
+	filter(treatment != "16-species-cut") |>
+	ggplot(aes(x = sum_basal_area, y = treatment, colour = treatment)) +
+	geom_swarm(shape = 16) +
+	scale_colour_sbe() +
+
+	data_summed |>
+		filter(treatment != "16-species-cut") |>
+		ggplot(aes(x = density, y = treatment, colour = treatment)) +
+	geom_swarm(shape = 16) +
+	scale_colour_sbe() +
+	plot_layout(guides = "collect")
+```
+```{r}
+m1 <-
+	glmmTMB(
+		sum_basal_area ~ 0 + treatment + (1 | block),
+		data = filter(data_summed, treatment != "16-species-cut"),
+		family = Gamma(link = "log")
+	)
+
+m2 <-
+	glmmTMB(
+		density ~ 0 + treatment + (1 | block),
+		data = filter(data_summed, treatment != "16-species-cut"),
+		family = nbinom2(link = "log")
+	)
+```
+
+Because we used a log link, we need to back transform estimates with `exp()`
+to get them on the response scale.
+
+```{r}
+results_1 <-
+	tibble(name = factor(c("Basal area", "Density")), fit = list(m1, m2)) |>
+	mutate(
+		tidy = purrr::map(
+			fit,
+			tidy,
+			effects = "fixed",
+			conf.int = TRUE,
+			exponentiate = TRUE
+		)
+	)
+```
+
+```{r}
+results_1 <-
+	results_1 |>
+	mutate(
+		resids = purrr::map(
+			fit,
+			DHARMa::simulateResiduals,
+			plot = FALSE
+		)
+	)
+```
+
+```{r}
+#| fig-height: 6
+#| fig-width: 9
+
+purrr::walk2(
+	results_1$resids,
+	results_1$name,
+	\(resids, name) plot(resids, title = name)
+)
+```
+
+```{r}
+#| fig-height: 3
+#| fig-width: 4.5
+
+results_1 |>
+	unnest(tidy) |>
+	mutate(term = str_remove(term, "treatment")) |>
+	mutate(
+		term = fct_relevel(
+			term,
+			"1-species",
+			"4-species",
+			"16-species"
+		),
+		name = fct_relevel(
+			name,
+			"Basal area",
+			"Density"
+		)
+	) |>
+	ggplot(aes(
+		x = term,
+		y = estimate,
+		ymin = conf.low,
+		ymax = conf.high,
+		colour = term
+	)) +
+	geom_pointrange(shape = 21, fill = "white") +
+	labs(x = "Term", y = "Estimate ± CI [95%]") +
+	coord_flip() +
+	scale_colour_sbe() +
+	facet_wrap(~name, ncol = 2, scales = "free_x")
+```
+
+Test if any difference between treatments:
+
+```{r}
+# basal area
+emm_m1 <- emmeans(m1, ~treatment)
+pairs(emm_m1, type = "response", infer = TRUE, level = 0.95)
+
+# seedling density
+emm_m2 <- emmeans(m2, ~treatment)
+pairs(emm_m2, type = "response", infer = TRUE, level = 0.95)
+```
+
+## 2. 16-species plots only
+
+```{r}
+#| fig-height: 4
+#| fig-width: 5
+
+data_summed |>
+	filter(species_mix == "16-species") |>
+	ggplot(aes(x = sum_basal_area, y = treatment, colour = treatment)) +
+	geom_swarm(shape = 16) +
+	scale_colour_sbe() +
+	data_summed |>
+		filter(species_mix == "16-species") |>
+		ggplot(aes(x = density, y = treatment, colour = treatment)) +
+	geom_swarm(shape = 16) +
+	scale_colour_sbe() +
+	plot_layout(guides = "collect")
+```
+
+```{r}
+m3 <-
+	glmmTMB(
+		sum_basal_area ~ 0 + treatment + (1 | block),
+		data = filter(data_summed, species_mix == "16-species"),
+		family = Gamma(link = "log")
+	)
+
+m4 <-
+	glmmTMB(
+		density ~ 0 + treatment + (1 | block),
+		data = filter(data_summed, species_mix == "16-species"),
+		family = nbinom2(link = "log")
+	)
+```
+
+```{r}
+results_2 <-
+	tibble(name = factor(c("Basal area", "Density")), fit = list(m3, m4)) |>
+	mutate(
+		tidy = purrr::map(
+			fit,
+			tidy,
+			effects = "fixed",
+			conf.int = TRUE,
+			exponentiate = TRUE
+		)
+	)
+```
+
+```{r}
+results_2 <-
+	results_2 |>
+	mutate(
+		resids = purrr::map(
+			fit,
+			DHARMa::simulateResiduals,
+			plot = FALSE
+		)
+	)
+```
+
+```{r}
+#| fig-height: 6
+#| fig-width: 9
+
+purrr::walk2(
+	results_2$resids,
+	results_2$name,
+	\(resids, name) plot(resids, title = name)
+)
+```
+
+```{r}
+#| fig-height: 3
+#| fig-width: 4.5
+
+results_2 |>
+	unnest(tidy) |>
+	mutate(term = str_remove(term, "treatment")) |>
+	mutate(
+		term = fct_relevel(
+			term,
+			"16-species",
+			"16-species-cut"
+		),
+		name = fct_relevel(
+			name,
+			"Basal area",
+			"Density"
+		)
+	) |>
+	ggplot(aes(
+		x = term,
+		y = estimate,
+		ymin = conf.low,
+		ymax = conf.high,
+		colour = term
+	)) +
+	geom_pointrange(shape = 21, fill = "white") +
+	labs(x = "Term", y = "Estimate ± CI [95%]") +
+	coord_flip() +
+	scale_colour_sbe() +
+	facet_wrap(~name, ncol = 2, scales = "free_x")
+```
+
+Test if any difference between treatments:
+
+```{r}
+# basal area
+emm_m3 <- emmeans(m3, ~treatment)
+pairs(emm_m3, type = "response", infer = TRUE, level = 0.95)
+
+# seedling density
+emm_m4 <- emmeans(m4, ~treatment)
+pairs(emm_m4, type = "response", infer = TRUE, level = 0.95)
+```
+
+## 3. 4-species plots only:
+
+Generic diversity is confounded with structural complexity,
+and the full interaction model might be overparameterised beause one of the
+four combinations is missing - there is no 4-genera, low-complexity combination.
+
+So I don't think we can get clean, independent main effects.
+
+We can try treating the 3 observed combinations as one 3-level factor.
+
+```{r}
+data_summed <- data_summed |>
+	mutate(
+		grichness_ccomplexity = interaction(
+			generic_diversity,
+			struc_complexity,
+			sep = ", ",
+			drop = TRUE
+		)
+	)
+```
+
+```{r}
+#| fig-height: 4
+#| fig-width: 5
+
+data_summed |>
+	filter(treatment == "4-species") |>
+	ggplot(aes(
+		x = sum_basal_area,
+		y = grichness_ccomplexity,
+		colour = treatment
+	)) +
+	geom_swarm(shape = 16) +
+	scale_colour_sbe() +
+	data_summed |>
+		filter(treatment == "4-species") |>
+		ggplot(aes(x = density, y = grichness_ccomplexity, colour = treatment)) +
+	geom_swarm(shape = 16) +
+	scale_colour_sbe() +
+	plot_layout(guides = "collect")
+```
+
+```{r}
+m5 <-
+	glmmTMB(
+		sum_basal_area ~ 0 + grichness_ccomplexity + (1 | block),
+		data = filter(data_summed, treatment == "4-species"),
+		family = Gamma(link = "log")
+	)
+
+m6 <-
+	glmmTMB(
+		density ~ 0 + grichness_ccomplexity + (1 | block),
+		data = filter(data_summed, treatment == "4-species"),
+		family = nbinom2(link = "log")
+	)
+```
+
+```{r}
+results_3 <-
+	tibble(name = factor(c("Basal area", "Density")), fit = list(m5, m6)) |>
+	mutate(
+		tidy = purrr::map(
+			fit,
+			tidy,
+			effects = "fixed",
+			conf.int = TRUE,
+			exponentiate = TRUE
+		)
+	)
+```
+
+```{r}
+results_3 <-
+	results_3 |>
+	mutate(
+		resids = purrr::map(
+			fit,
+			DHARMa::simulateResiduals,
+			plot = FALSE
+		)
+	)
+```
+
+```{r}
+#| fig-height: 6
+#| fig-width: 9
+
+purrr::walk2(
+	results_3$resids,
+	results_3$name,
+	\(resids, name) plot(resids, title = name)
+)
+```
+
+```{r}
+#| fig-height: 3
+#| fig-width: 4.5
+
+results_3 |>
+	unnest(tidy) |>
+	mutate(
+		name = fct_relevel(
+			name,
+			"Basal area",
+			"Density"
+		),
+		treatment = "4-species"
+	) |>
+	ggplot(aes(
+		x = term,
+		y = estimate,
+		ymin = conf.low,
+		ymax = conf.high,
+		colour = treatment
+	)) +
+	geom_pointrange(shape = 21, fill = "white") +
+	labs(x = "Term", y = "Estimate ± CI [95%]") +
+	coord_flip() +
+	scale_colour_sbe() +
+	facet_wrap(~name, ncol = 2, scales = "free_x")
+```
+
+Test if any difference between treatments:
+
+```{r}
+# basal area
+emm_m3 <- emmeans(m5, ~grichness_ccomplexity)
+pairs(emm_m3, type = "response", infer = TRUE, level = 0.95)
+
+# seedling density
+emm_m4 <- emmeans(m6, ~grichness_ccomplexity)
+pairs(emm_m4, type = "response", infer = TRUE, level = 0.95)
+```
