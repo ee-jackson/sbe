@@ -77,11 +77,21 @@ data_summed |>
 	geom_density()
 ```
 
-Summed basal area is continuous and non-negative. If all values are positive and right-skewed, a Gamma model with a log link?
+Summed basal area is continuous and non-negative with a right skew.
+Lognormal distibution is usually used for e.g. size, mass (exponential growth).
+The alternative way to do this would be to log the data and fit a gaussian.
 
-For seedling density, probably negative binomial
+For seedling density, we probably want to model a negative binomial response
+distribution (discrete, non-negative, right skew).
 
 ## 1. Including all plots
+
+```{r}
+data_summed |>
+	filter(treatment != "16-species-cut") |>
+	group_by(treatment) |>
+	summarise(n = n_distinct(plot))
+```
 
 ```{r}
 data_summed |>
@@ -97,17 +107,24 @@ data_summed |>
 	scale_colour_sbe() +
 	plot_layout(guides = "collect")
 ```
+
+For density, I'm modelling the dispersion parameter as a function of treatment.
+The single-species plots have a more variance than the other two groups (see figure above).
+When I ran the model treating the dispersion parameter as a constant,
+it "violated the assumption of a homogeneous dispersion parameter across groups" - DHARMa.
+
 ```{r}
 m1 <-
 	glmmTMB(
 		sum_basal_area ~ 0 + treatment + (1 | block),
 		data = filter(data_summed, treatment != "16-species-cut"),
-		family = Gamma(link = "log")
+		family = lognormal(link = "log")
 	)
 
 m2 <-
 	glmmTMB(
 		density ~ 0 + treatment + (1 | block),
+		dispformula = ~treatment,
 		data = filter(data_summed, treatment != "16-species-cut"),
 		family = nbinom2(link = "log")
 	)
@@ -192,14 +209,61 @@ Test if any difference between treatments:
 ```{r}
 # basal area
 emm_m1 <- emmeans(m1, ~treatment)
-pairs(emm_m1, type = "response", infer = TRUE, level = 0.95)
+pairs(
+	emm_m1,
+	type = "response",
+	side = "two-sided",
+	infer = TRUE,
+	level = 0.95,
+	adjust = "tukey"
+)
 
 # seedling density
 emm_m2 <- emmeans(m2, ~treatment)
-pairs(emm_m2, type = "response", infer = TRUE, level = 0.95)
+pairs(
+	emm_m2,
+	type = "response",
+	side = "two-sided",
+	infer = TRUE,
+	level = 0.95,
+	adjust = "tukey"
+)
 ```
 
+Beacuse we use a log-link in all our models, contrasts become ratios after back-transformation, so:
+
+- ratio of `1` = groups have the same estimated response
+- `1.25` = first group is 25% higher than the second
+- `0.80` = first group is 20% lower than the second
+- `2` = first group has twice the estimated response
+- `0.50` = first group has half the estimated response
+
+For confidence intervals:
+
+- If the entire ratio CI is above `1`, the first group is estimated to have the higher response
+- If the entire CI is below `1`, the first group is estimated to have the lower response
+- If the CI includes `1`, the results are compatible with no difference, as well as the range of effects covered by the interval
+
+### Results
+
+- Basal area
+    - Basal area was estimated to be similar in 1- and 4-species plots (ratio: 1.03; Tukey-adjusted 95% CI: 0.75–1.42). The interval was compatible with basal area being approximately 25% lower to 42% higher in 1-species plots
+    - Basal area in 1-species plots was estimated to be 0.79 times that in 16-species plots (95% CI: 0.58–1.07), corresponding to an estimated 21% lower basal area. However, the interval ranged from approximately 42% lower to 7% higher
+    - Basal area in 4-species plots was estimated to be 0.77 times that in 16-species plots (95% CI: 0.57–1.03), corresponding to an estimated 23% lower basal area. The interval ranged from approximately 43% lower to 3% higher
+- Seedling density
+    - Seedling density was estimated to be similar in 1- and 4-species plots (ratio: 1.02; Tukey-adjusted 95% CI: 0.72–1.46)
+    - Seedling density in 1-species plots was estimated to be 1.13 times that in 16-species plots (95% CI: 0.81–1.59), corresponding to an estimated 13% higher density, with the interval ranging from approximately 19% lower to 59% higher
+    - Seedling density in 4-species plots was estimated to be 1.11 times that in 16-species plots (95% CI: 0.90–1.36), corresponding to an estimated 11% higher density, with the interval ranging from approximately 10% lower to 36% higher
+- All intervals include a ratio of one, suggesting that there is no clear difference in the estimated response between groups
+
 ## 2. 16-species plots only
+
+```{r}
+data_summed |>
+	filter(species_mix == "16-species") |>
+	group_by(treatment) |>
+	summarise(n = n_distinct(plot))
+```
 
 ```{r}
 #| fig-height: 4
@@ -223,7 +287,7 @@ m3 <-
 	glmmTMB(
 		sum_basal_area ~ 0 + treatment + (1 | block),
 		data = filter(data_summed, species_mix == "16-species"),
-		family = Gamma(link = "log")
+		family = lognormal(link = "log")
 	)
 
 m4 <-
@@ -309,12 +373,41 @@ Test if any difference between treatments:
 ```{r}
 # basal area
 emm_m3 <- emmeans(m3, ~treatment)
-pairs(emm_m3, type = "response", infer = TRUE, level = 0.95)
+pairs(
+	emm_m3,
+	type = "response",
+	side = "two-sided",
+	infer = TRUE,
+	level = 0.95,
+	reverse = TRUE,
+	adjust = "none" # only 2 groups so no adjustment needed
+)
 
 # seedling density
 emm_m4 <- emmeans(m4, ~treatment)
-pairs(emm_m4, type = "response", infer = TRUE, level = 0.95)
+pairs(
+	emm_m4,
+	type = "response",
+	side = "two-sided",
+	infer = TRUE,
+	level = 0.95,
+	reverse = TRUE,
+	adjust = "none"
+)
 ```
+
+### Results
+
+- Basal area
+    - Basal area in liana-cut plots was estimated to be 1.25 times that in uncut 16-species plots (95% CI: 0.97–1.61), corresponding to an estimated 25% increase
+    - The confidence interval ranged from approximately 3% lower to 61% higher and included a ratio of 1. The data therefore remain compatible with no difference, although the point estimate suggests higher basal area following liana cutting
+- Seedling density
+    - Seedling density in liana-cut plots was estimated to be 1.26 times that in uncut 16-species plots (95% CI: 1.05–1.50), corresponding to an estimated 26% increase
+    - The entire confidence interval was above 1, indicating that density was estimated to be approximately 5–50% higher in liana-cut plots
+    - the results support higher seedling density following liana cutting, but the confidence interval around the magnitude of that increase is large
+
+Even though the confidence intervals for the two seedling density estimates overlap (see figure above), this does not directly measure uncertainty in their difference.
+The model contrast incorporates the covariance between the estimates and supports higher seedling density in liana-cut plots.
 
 ## 3. 4-species plots only:
 
@@ -339,24 +432,60 @@ data_summed <- data_summed |>
 ```
 
 ```{r}
-#| fig-height: 4
-#| fig-width: 5
-
 data_summed |>
 	filter(treatment == "4-species") |>
+	group_by(grichness_ccomplexity) |>
+	summarise(n = n_distinct(plot))
+```
+
+```{r}
+#| fig-height: 4
+#| fig-width: 5
+data_summed |>
+	filter(treatment == "4-species" & generic_diversity == "2-genera") |>
 	ggplot(aes(
 		x = sum_basal_area,
-		y = grichness_ccomplexity,
+		y = struc_complexity,
 		colour = treatment
 	)) +
 	geom_swarm(shape = 16) +
 	scale_colour_sbe() +
 	data_summed |>
-		filter(treatment == "4-species") |>
-		ggplot(aes(x = density, y = grichness_ccomplexity, colour = treatment)) +
+		filter(treatment == "4-species" & generic_diversity == "2-genera") |>
+		ggplot(aes(
+			x = density,
+			y = struc_complexity,
+			colour = treatment
+		)) +
 	geom_swarm(shape = 16) +
 	scale_colour_sbe() +
-	plot_layout(guides = "collect")
+	plot_layout(guides = "collect") +
+	plot_annotation(title = "Generic richness held at two")
+```
+
+```{r}
+#| fig-height: 4
+#| fig-width: 5
+data_summed |>
+	filter(treatment == "4-species" & struc_complexity == "high") |>
+	ggplot(aes(
+		x = sum_basal_area,
+		y = generic_diversity,
+		colour = treatment
+	)) +
+	geom_swarm(shape = 16) +
+	scale_colour_sbe() +
+	data_summed |>
+		filter(treatment == "4-species" & struc_complexity == "high") |>
+		ggplot(aes(
+			x = density,
+			y = generic_diversity,
+			colour = treatment
+		)) +
+	geom_swarm(shape = 16) +
+	scale_colour_sbe() +
+	plot_layout(guides = "collect") +
+	plot_annotation(title = "Canopy structural complexity held at `high`")
 ```
 
 ```{r}
@@ -364,7 +493,7 @@ m5 <-
 	glmmTMB(
 		sum_basal_area ~ 0 + grichness_ccomplexity + (1 | block),
 		data = filter(data_summed, treatment == "4-species"),
-		family = Gamma(link = "log")
+		family = lognormal(link = "log")
 	)
 
 m6 <-
@@ -415,7 +544,6 @@ purrr::walk2(
 ```{r}
 #| fig-height: 3
 #| fig-width: 4.5
-
 results_3 |>
 	unnest(tidy) |>
 	mutate(
@@ -444,10 +572,51 @@ Test if any difference between treatments:
 
 ```{r}
 # basal area
-emm_m3 <- emmeans(m5, ~grichness_ccomplexity)
-pairs(emm_m3, type = "response", infer = TRUE, level = 0.95)
+emm_m5 <- emmeans(m5, ~grichness_ccomplexity)
+contrast(
+	emm_m5,
+	method = list(
+		"canopy complexity low vs high (at 2 genera)" = c(1, -1, 0),
+		"generic richness 2 vs 4 (at high complexity)" = c(0, 1, -1)
+	),
+	type = "response",
+	side = "two-sided",
+	infer = TRUE,
+	level = 0.95,
+	adjust = "holm"
+)
 
 # seedling density
-emm_m4 <- emmeans(m6, ~grichness_ccomplexity)
-pairs(emm_m4, type = "response", infer = TRUE, level = 0.95)
+emm_m6 <- emmeans(m6, ~grichness_ccomplexity)
+contrast(
+	emm_m6,
+	method = list(
+		"canopy complexity low vs high (at 2 genera)" = c(1, -1, 0),
+		"generic richness 2 vs 4 (at high complexity)" = c(0, 1, -1)
+	),
+	type = "response",
+	side = "two-sided",
+	infer = TRUE,
+	level = 0.95,
+	adjust = "holm"
+)
 ```
+
+### Results
+
+- Basal area
+    - Basal area under low canopy complexity was 0.82 times (0.47-1.43) that under high complexity when generic richness was held at 2 genera
+    - Basal area under generic richness 2 was 1.16 times (0.71-1.90) that in the 4 genera treatment when canopy complexity was held at `high`
+- Seedling density
+    - Seedling density under low canopy complexity was 0.68 times (0.45-1.04) that under high complexity when generic richness was held at 2 genera
+    - When canopy complexity was held at `high` seedling density was nearly identical between the two- and four- genera treatments (ratio 1.01, 0.70-1.46)
+- All intervals include one, suggesting that there is no clear difference in the estimated response between groups.
+
+## Results summary
+
+Across the species richness treatments (all plots), all 95% confidence intervals for the basal area and seedling density ratios included 1,
+meaning the estimates remained compatible with no difference.
+
+The confidence intervals for comparisons among the observed generic richness and canopy complexity combinations (4-species plots) likewise included 1.
+
+In the liana cutting comparisons (16-species plots), the basal area ratio also showed no difference between groups. However, seedling density was estimated to be 26% higher in liana-cut plots than in uncut plots, with the 95% confidence interval indicating an increase of approximately 5% to 50%.
