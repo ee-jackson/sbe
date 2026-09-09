@@ -577,7 +577,11 @@ data_backfilled <-
 					"4-species(1)",
 					"4-species(2)",
 					"4-species(3)",
-					"4-species(4)"
+					"4-species(4)",
+					"4-species(9)",
+					"4-species(10)",
+					"4-species(11)",
+					"4-species(12)"
 				) ~ "low",
 			species_mix %in%
 				c(
@@ -585,10 +589,6 @@ data_backfilled <-
 					"4-species(6)",
 					"4-species(7)",
 					"4-species(8)",
-					"4-species(9)",
-					"4-species(10)",
-					"4-species(11)",
-					"4-species(12)",
 					"4-species(13)",
 					"4-species(14)",
 					"4-species(15)",
@@ -596,7 +596,7 @@ data_backfilled <-
 				) ~ "high",
 			.default = NA
 		),
-		generic_diversity = case_when(
+		generic_richness = case_when(
 			species_mix %in%
 				c(
 					"4-species(1)",
@@ -641,7 +641,7 @@ data_backfilled <-
 		treatment,
 		species_mix,
 		struc_complexity,
-		generic_diversity,
+		generic_richness,
 		block,
 		plot,
 		line,
@@ -668,7 +668,7 @@ data_backfilled <-
 			treatment,
 			species_mix,
 			struc_complexity,
-			generic_diversity,
+			generic_richness,
 			block,
 			plot,
 			line,

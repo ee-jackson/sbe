@@ -122,7 +122,7 @@ metadata <-
 		treatment,
 		species_mix,
 		struc_complexity,
-		generic_diversity
+		generic_richness
 	) |>
 	distinct() |>
 	filter(treatment != "1-species") |>
