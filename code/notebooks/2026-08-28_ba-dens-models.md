@@ -880,141 +880,212 @@ true heteroscedasticity.
 
 ### Results
 
-``` r
-# basal area
-emm_m5 <- emmeans(m5, ~ struc_complexity * generic_richness)
+`emmeans::joint_tests()` tests whether the interaction contrast is zero
+on the model’s link scale. Since we have a balanced 2 × 2 design, the
+interaction test addresses the same hypothesis as comparing interaction
+vs additive models, although it uses a Wald test rather than a
+likelihood-ratio test.
 
-pairs(
-    emm_m5,
-    type = "response",
-    side = "two-sided",
-    infer = TRUE,
-    level = 0.95,
-    reverse = TRUE,
-    adjust = "none"
-)
+``` r
+# joint_tests() produces an ANOVA-like table based on linear functions of predictors in a model
+# the function constructs, for each combination of factors (or covariates reduced to two or more levels),
+# a set of (interaction) contrasts via contrast, and then tests them using test with joint = TRUE
+emmeans::joint_tests(m5)
 ```
 
-     contrast                          ratio    SE  df asymp.LCL asymp.UCL null
-     (high 2-genera) / (low 2-genera)  1.221 0.308 Inf     0.745      2.00    1
-     (low 4-genera) / (low 2-genera)   0.869 0.235 Inf     0.511      1.48    1
-     (low 4-genera) / (high 2-genera)  0.712 0.186 Inf     0.426      1.19    1
-     (high 4-genera) / (low 2-genera)  1.470 0.377 Inf     0.889      2.43    1
-     (high 4-genera) / (high 2-genera) 1.203 0.298 Inf     0.741      1.96    1
-     (high 4-genera) / (low 4-genera)  1.690 0.447 Inf     1.007      2.84    1
-     z.ratio p.value
-       0.793  0.4278
-      -0.517  0.6053
-      -1.297  0.1945
-       1.500  0.1336
-       0.748  0.4545
-       1.985  0.0472
+     model term                        df1 df2 F.ratio Chisq p.value
+     struc_complexity                    1 Inf   3.938 3.938  0.0472
+     generic_richness                    1 Inf   0.015 0.015  0.9022
+     struc_complexity:generic_richness   1 Inf   0.791 0.791  0.3738
 
-    Confidence level used: 0.95 
-    Intervals are back-transformed from the log scale 
-    Tests are performed on the log scale 
+Since there is no clear evidence of an interaction, we can present the
+two prespecified marginal comparisons while retaining and reporting the
+interaction.
 
 ``` r
+emm_m5_canopy <-
+    emmeans(
+        m5,
+        ~struc_complexity,
+        regrid = "response",
+        weights = "equal" # i.e. if the population was balanced equally between 2 and 4 generic richness
+    )
+
+emm_m5_genera <-
+    emmeans(
+        m5,
+        regrid = "response",
+        ~generic_richness,
+        weights = "equal"
+    )
+
 plot(
-    emm_m5,
+    emm_m5_genera,
     type = "response",
-    side = "two-sided",
-    level = 0.95,
-    reverse = TRUE,
-    comparisons = TRUE,
-    adjust = "none"
+    comparisons = TRUE
 ) +
-    ggtitle("Basal area") +
-    theme_sbe()
-```
-
-![](figures/2026-08-28_ba-dens-models/unnamed-chunk-37-1.png)
-
-- Basal area
-  - At two genera, basal area under high canopy complexity was estimated
-    to be 1.22 times that under low complexity (95% CI: 0.75–2.00). The
-    interval included 1 and remained compatible with no difference
-  - At four genera, basal area under high canopy complexity was
-    estimated to be 1.69 times that under low complexity (95% CI:
-    1.01–2.84), indicating an estimated increase of approximately 1–184%
-  - The high-versus-low complexity ratio was estimated to be 1.38 times
-    greater at four genera than at two genera (interaction ratio: 1.38;
-    95% CI: 0.68–2.83). This interval included 1, so the magnitude of
-    the interaction remains uncertain
-  - Comparing generic richness within each complexity level, basal area
-    in four-genera plots was estimated to be 0.87 times that in
-    two-genera plots under low complexity (95% CI: 0.51–1.48) and 1.20
-    times that in two-genera plots under high complexity (95% CI:
-    0.74–1.96). Both intervals included 1
-
-``` r
-# basal area
-emm_m6 <- emmeans(m6, ~ struc_complexity * generic_richness)
-
-pairs(
-    emm_m6,
-    type = "response",
-    side = "two-sided",
-    infer = TRUE,
-    level = 0.95,
-    reverse = TRUE,
-    adjust = "none"
-)
-```
-
-     contrast                          ratio    SE  df asymp.LCL asymp.UCL null
-     (high 2-genera) / (low 2-genera)  1.464 0.247 Inf     1.051      2.04    1
-     (low 4-genera) / (low 2-genera)   1.103 0.187 Inf     0.791      1.54    1
-     (low 4-genera) / (high 2-genera)  0.753 0.127 Inf     0.542      1.05    1
-     (high 4-genera) / (low 2-genera)  1.794 0.302 Inf     1.290      2.49    1
-     (high 4-genera) / (high 2-genera) 1.225 0.205 Inf     0.883      1.70    1
-     (high 4-genera) / (low 4-genera)  1.627 0.273 Inf     1.170      2.26    1
-     z.ratio p.value
-       2.257  0.0240
-       0.576  0.5648
-      -1.682  0.0926
-       3.471  0.0005
-       1.217  0.2237
-       2.897  0.0038
-
-    Confidence level used: 0.95 
-    Intervals are back-transformed from the log scale 
-    Tests are performed on the log scale 
-
-``` r
-plot(
-    emm_m6,
-    type = "response",
-    side = "two-sided",
-    level = 0.95,
-    reverse = TRUE,
-    comparisons = TRUE,
-    adjust = "none"
-) +
-    ggtitle("Seedling density") +
-    theme_sbe()
+    plot(
+        emm_m5_canopy,
+        type = "response",
+        comparisons = TRUE
+    ) +
+    plot_annotation(title = "Basal area")
 ```
 
 ![](figures/2026-08-28_ba-dens-models/unnamed-chunk-38-1.png)
 
-- Seedling density
-  - At two genera, seedling density under high canopy complexity was
-    estimated to be 1.46 times that under low complexity (95% CI:
-    1.05–2.04), indicating an estimated increase of approximately 5–104%
-  - At four genera, seedling density under high canopy complexity was
-    estimated to be 1.63 times that under low complexity (95% CI:
-    1.17–2.26), indicating an estimated increase of approximately
-    17–126%
-  - The high-versus-low complexity ratio was estimated to be 1.11 times
-    greater at four genera than at two genera (interaction ratio: 1.11;
-    95% CI: 0.70–1.77). This interval included 1, providing no clear
-    evidence that the canopy-complexity effect differed with generic
-    richness
-  - Comparing generic richness within each complexity level, density in
-    four-genera plots was estimated to be 1.10 times that in two-genera
-    plots under low complexity (95% CI: 0.79–1.54) and 1.23 times that
-    in two-genera plots under high complexity (95% CI: 0.88–1.70). Both
-    intervals included 1
+``` r
+# basal area
+# marginal means:
+emm_m5_canopy
+```
+
+     struc_complexity response     SE  df asymp.LCL asymp.UCL
+     low                 0.310 0.0642 Inf     0.184     0.436
+     high                0.447 0.0945 Inf     0.261     0.632
+
+    Results are averaged over the levels of: generic_richness 
+    Confidence level used: 0.95 
+
+``` r
+# contrasts:
+pairs(
+    emm_m5_canopy,
+    reverse = TRUE,
+    infer = TRUE
+)
+```
+
+     contrast   estimate     SE  df asymp.LCL asymp.UCL z.ratio p.value
+     high - low    0.136 0.0745 Inf  -0.00977     0.282   1.829  0.0674
+
+    Results are averaged over the levels of: generic_richness 
+    Confidence level used: 0.95 
+
+``` r
+# marginal means:
+emm_m5_genera
+```
+
+     generic_richness response     SE  df asymp.LCL asymp.UCL
+     2-genera            0.369 0.0723 Inf     0.227     0.510
+     4-genera            0.388 0.0868 Inf     0.218     0.558
+
+    Results are averaged over the levels of: struc_complexity 
+    Confidence level used: 0.95 
+
+``` r
+# contrasts:
+pairs(
+    emm_m5_genera,
+    reverse = TRUE,
+    infer = TRUE
+)
+```
+
+     contrast                estimate     SE  df asymp.LCL asymp.UCL z.ratio
+     (4-genera) - (2-genera)   0.0196 0.0705 Inf    -0.119     0.158   0.277
+     p.value
+      0.7815
+
+    Results are averaged over the levels of: struc_complexity 
+    Confidence level used: 0.95 
+
+``` r
+emmeans::joint_tests(m6)
+```
+
+     model term                        df1 df2 F.ratio  Chisq p.value
+     struc_complexity                    1 Inf  13.275 13.275  0.0003
+     generic_richness                    1 Inf   1.598  1.598  0.2062
+     struc_complexity:generic_richness   1 Inf   0.197  0.197  0.6574
+
+``` r
+emm_m6_canopy <-
+    emmeans(
+        m6,
+        regrid = "response",
+        ~struc_complexity,
+        weights = "equal"
+    )
+
+emm_m6_genera <-
+    emmeans(
+        m6,
+        regrid = "response",
+        ~generic_richness,
+        weights = "equal"
+    )
+
+plot(
+    emm_m6_genera,
+    type = "response",
+    comparisons = TRUE
+) +
+    plot(
+        emm_m6_canopy,
+        type = "response",
+        comparisons = TRUE
+    ) +
+    plot_annotation(title = "Seedling density")
+```
+
+![](figures/2026-08-28_ba-dens-models/unnamed-chunk-40-1.png)
+
+``` r
+# seedling density
+# marginal means:
+emm_m6_canopy
+```
+
+     struc_complexity response    SE  df asymp.LCL asymp.UCL
+     low                   101  8.59 Inf      84.4       118
+     high                  157 13.20 Inf     131.0       183
+
+    Results are averaged over the levels of: generic_richness 
+    Confidence level used: 0.95 
+
+``` r
+# contrasts:
+pairs(
+    emm_m6_canopy,
+    reverse = TRUE,
+    infer = TRUE
+)
+```
+
+     contrast   estimate   SE  df asymp.LCL asymp.UCL z.ratio p.value
+     high - low     55.6 15.7 Inf      24.8      86.4   3.537  0.0004
+
+    Results are averaged over the levels of: generic_richness 
+    Confidence level used: 0.95 
+
+``` r
+# marginal means:
+emm_m6_genera
+```
+
+     generic_richness response   SE  df asymp.LCL asymp.UCL
+     2-genera              119 10.2 Inf      98.7       138
+     4-genera              139 12.0 Inf     115.9       163
+
+    Results are averaged over the levels of: struc_complexity 
+    Confidence level used: 0.95 
+
+``` r
+# contrasts:
+pairs(
+    emm_m6_genera,
+    reverse = TRUE,
+    infer = TRUE
+)
+```
+
+     contrast                estimate   SE  df asymp.LCL asymp.UCL z.ratio p.value
+     (4-genera) - (2-genera)     20.8 15.7 Inf     -9.98      51.6   1.325  0.1852
+
+    Results are averaged over the levels of: struc_complexity 
+    Confidence level used: 0.95 
 
 ## Results summary
 
@@ -1030,9 +1101,4 @@ higher in liana-cut plots than in uncut plots, with the 95% confidence
 interval indicating an increase of approximately 5–50%.
 
 Within 4-species plots, high canopy complexity was associated with
-higher basal area at four genera and higher seedling density at both two
-and four genera. However, the interaction intervals included 1 for both
-responses, so there was no clear evidence that the effect of canopy
-complexity differed between the two generic-richness levels. The
-generic-richness contrasts within each canopy-complexity level also
-remained compatible with no difference.
+increased seedling density.

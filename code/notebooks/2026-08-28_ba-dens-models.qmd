@@ -747,75 +747,127 @@ but I think this is due to the outlier in the 4-genera, high complexity group ra
 
 ### Results
 
+`emmeans::joint_tests()` tests whether the interaction contrast is zero on the model’s link scale.
+Since we have a balanced 2 × 2 design, the interaction test addresses the same hypothesis as comparing interaction vs additive models, although it uses a Wald test rather than a likelihood-ratio test.
+
 ```{r}
-#| fig-height: 3
-#| fig-width: 4.5
-# basal area
-emm_m5 <- emmeans(m5, ~ struc_complexity * generic_richness)
-
-pairs(
-	emm_m5,
-	type = "response",
-	side = "two-sided",
-	infer = TRUE,
-	level = 0.95,
-	reverse = TRUE,
-	adjust = "none"
-)
-
-plot(
-	emm_m5,
-	type = "response",
-	side = "two-sided",
-	level = 0.95,
-	reverse = TRUE,
-	comparisons = TRUE,
-	adjust = "none"
-) +
-	ggtitle("Basal area") +
-	theme_sbe()
+# joint_tests() produces an ANOVA-like table based on linear functions of predictors in a model
+# the function constructs, for each combination of factors (or covariates reduced to two or more levels),
+# a set of (interaction) contrasts via contrast, and then tests them using test with joint = TRUE
+emmeans::joint_tests(m5)
 ```
 
-- Basal area
-    - At two genera, basal area under high canopy complexity was estimated to be 1.22 times that under low complexity (95% CI: 0.75–2.00). The interval included 1 and remained compatible with no difference
-    - At four genera, basal area under high canopy complexity was estimated to be 1.69 times that under low complexity (95% CI: 1.01–2.84), indicating an estimated increase of approximately 1–184%
-    - The high-versus-low complexity ratio was estimated to be 1.38 times greater at four genera than at two genera (interaction ratio: 1.38; 95% CI: 0.68–2.83). This interval included 1, so the magnitude of the interaction remains uncertain
-    - Comparing generic richness within each complexity level, basal area in four-genera plots was estimated to be 0.87 times that in two-genera plots under low complexity (95% CI: 0.51–1.48) and 1.20 times that in two-genera plots under high complexity (95% CI: 0.74–1.96). Both intervals included 1
+Since there is no clear evidence of an interaction, we can present the two prespecified marginal comparisons while retaining and reporting the interaction.
 
 ```{r}
 #| fig-height: 3
-#| fig-width: 4.5
-# basal area
-emm_m6 <- emmeans(m6, ~ struc_complexity * generic_richness)
+#| fig-width: 6
+emm_m5_canopy <-
+	emmeans(
+		m5,
+		~struc_complexity,
+		regrid = "response",
+		weights = "equal" # i.e. if the population was balanced equally between 2 and 4 generic richness
+	)
 
-pairs(
-	emm_m6,
-	type = "response",
-	side = "two-sided",
-	infer = TRUE,
-	level = 0.95,
-	reverse = TRUE,
-	adjust = "none"
-)
+emm_m5_genera <-
+	emmeans(
+		m5,
+		regrid = "response",
+		~generic_richness,
+		weights = "equal"
+	)
 
 plot(
-	emm_m6,
+	emm_m5_genera,
 	type = "response",
-	side = "two-sided",
-	level = 0.95,
-	reverse = TRUE,
-	comparisons = TRUE,
-	adjust = "none"
+	comparisons = TRUE
 ) +
-	ggtitle("Seedling density") +
-	theme_sbe()
+	plot(
+		emm_m5_canopy,
+		type = "response",
+		comparisons = TRUE
+	) +
+	plot_annotation(title = "Basal area")
+
+# basal area
+# marginal means:
+emm_m5_canopy
+
+# contrasts:
+pairs(
+	emm_m5_canopy,
+	reverse = TRUE,
+	infer = TRUE
+)
+
+# marginal means:
+emm_m5_genera
+
+# contrasts:
+pairs(
+	emm_m5_genera,
+	reverse = TRUE,
+	infer = TRUE
+)
 ```
 
-- Seedling density
-    - At two genera, seedling density under high canopy complexity was estimated to be 1.46 times that under low complexity (95% CI: 1.05–2.04), indicating an estimated increase of approximately 5–104%
-    - At four genera, seedling density under high canopy complexity was estimated to be 1.63 times that under low complexity (95% CI: 1.17–2.26), indicating an estimated increase of approximately 17–126%
-    - The high-versus-low complexity ratio was estimated to be 1.11 times greater at four genera than at two genera (interaction ratio: 1.11; 95% CI: 0.70–1.77). This interval included 1, providing no clear evidence that the canopy-complexity effect differed with generic richness
-    - Comparing generic richness within each complexity level, density in four-genera plots was estimated to be 1.10 times that in two-genera plots under low complexity (95% CI: 0.79–1.54) and 1.23 times that in two-genera plots under high complexity (95% CI: 0.88–1.70). Both intervals included 1
+```{r}
+emmeans::joint_tests(m6)
+```
+
+```{r}
+#| fig-height: 3
+#| fig-width: 6
+emm_m6_canopy <-
+	emmeans(
+		m6,
+		regrid = "response",
+		~struc_complexity,
+		weights = "equal"
+	)
+
+emm_m6_genera <-
+	emmeans(
+		m6,
+		regrid = "response",
+		~generic_richness,
+		weights = "equal"
+	)
+
+plot(
+	emm_m6_genera,
+	type = "response",
+	comparisons = TRUE
+) +
+	plot(
+		emm_m6_canopy,
+		type = "response",
+		comparisons = TRUE
+	) +
+	plot_annotation(title = "Seedling density")
+
+# seedling density
+# marginal means:
+emm_m6_canopy
+
+# contrasts:
+pairs(
+	emm_m6_canopy,
+	reverse = TRUE,
+	infer = TRUE
+)
+
+# marginal means:
+emm_m6_genera
+
+# contrasts:
+pairs(
+	emm_m6_genera,
+	reverse = TRUE,
+	infer = TRUE
+)
+```
 
 ## Results summary
 
@@ -824,6 +876,4 @@ The other basal area comparison intervals and all seedling density comparison in
 
 In the liana-cutting comparisons (16-species plots), the basal area interval included 1. However, seedling density was estimated to be 26% higher in liana-cut plots than in uncut plots, with the 95% confidence interval indicating an increase of approximately 5–50%.
 
-Within 4-species plots, high canopy complexity was associated with higher basal area at four genera and higher seedling density at both two and four genera.
-However, the interaction intervals included 1 for both responses, so there was no clear evidence that the effect of canopy complexity differed between the two generic-richness levels.
-The generic-richness contrasts within each canopy-complexity level also remained compatible with no difference.
+Within 4-species plots, high canopy complexity was associated with increased seedling density.
