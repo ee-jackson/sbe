@@ -745,32 +745,6 @@ purrr::walk2(
 Borderline DHARMa test for the basal area model `m5`,
 but I think this is due to the outlier in the 4-genera, high complexity group rather than true heteroscedasticity.
 
-```{r}
-#| fig-height: 3
-#| fig-width: 5
-results_3 |>
-	unnest(tidy) |>
-	mutate(
-		name = fct_relevel(
-			name,
-			"Density"
-		),
-		treatment = "4-species"
-	) |>
-	ggplot(aes(
-		x = term,
-		y = estimate,
-		ymin = conf.low,
-		ymax = conf.high,
-		colour = treatment
-	)) +
-	geom_pointrange(shape = 21, fill = "white") +
-	labs(x = "Term", y = "Estimate ± CI [95%]") +
-	coord_flip() +
-	scale_colour_sbe() +
-	facet_grid(~name, scales = "free_x")
-```
-
 ### Results
 
 ```{r}

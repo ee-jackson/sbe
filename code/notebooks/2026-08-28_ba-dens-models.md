@@ -1,6 +1,6 @@
 # Basal area and density models
 eleanorjackson
-10 September, 2026
+16 September, 2026
 
 - [1. Including all plots](#1-including-all-plots)
   - [Results](#results)
@@ -878,32 +878,6 @@ Borderline DHARMa test for the basal area model `m5`, but I think this
 is due to the outlier in the 4-genera, high complexity group rather than
 true heteroscedasticity.
 
-``` r
-results_3 |>
-    unnest(tidy) |>
-    mutate(
-        name = fct_relevel(
-            name,
-            "Density"
-        ),
-        treatment = "4-species"
-    ) |>
-    ggplot(aes(
-        x = term,
-        y = estimate,
-        ymin = conf.low,
-        ymax = conf.high,
-        colour = treatment
-    )) +
-    geom_pointrange(shape = 21, fill = "white") +
-    labs(x = "Term", y = "Estimate ± CI [95%]") +
-    coord_flip() +
-    scale_colour_sbe() +
-    facet_grid(~name, scales = "free_x")
-```
-
-![](figures/2026-08-28_ba-dens-models/unnamed-chunk-37-1.png)
-
 ### Results
 
 ``` r
@@ -954,7 +928,7 @@ plot(
     theme_sbe()
 ```
 
-![](figures/2026-08-28_ba-dens-models/unnamed-chunk-38-1.png)
+![](figures/2026-08-28_ba-dens-models/unnamed-chunk-37-1.png)
 
 - Basal area
   - At two genera, basal area under high canopy complexity was estimated
@@ -1021,7 +995,7 @@ plot(
     theme_sbe()
 ```
 
-![](figures/2026-08-28_ba-dens-models/unnamed-chunk-39-1.png)
+![](figures/2026-08-28_ba-dens-models/unnamed-chunk-38-1.png)
 
 - Seedling density
   - At two genera, seedling density under high canopy complexity was
