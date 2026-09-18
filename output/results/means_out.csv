@@ -1,0 +1,13 @@
+model_set,response,formula,marginal_effect,liana_treatment,estimate,SE,df,asymp.LCL,asymp.UCL,struc_complexity,generic_richness
+liana_cut_models,basal_area,basal_area ~ 0 + liana_treatment + (1 | block),liana_treatment,cut,0.5566865975465978,0.07538171225286078,Inf,0.408941156438029,0.7044320386551666,NA,NA
+liana_cut_models,basal_area,basal_area ~ 0 + liana_treatment + (1 | block),liana_treatment,not_cut,0.4455267578950292,0.054697616150848775,Inf,0.33832140019916923,0.5527321155908892,NA,NA
+liana_cut_models,seedling_density,seedling_density ~ 0 + liana_treatment + (1 | block),liana_treatment,cut,146.57104518359418,14.111889299227325,Inf,118.91225040329245,174.22983996389593,NA,NA
+liana_cut_models,seedling_density,seedling_density ~ 0 + liana_treatment + (1 | block),liana_treatment,not_cut,116.75652878834025,9.474212016255326,Inf,98.1874144545832,135.3256431220973,NA,NA
+genera_structure_models,basal_area,basal_area ~ struc_complexity * generic_richness + (1 | block),struc_complexity,NA,0.3102277598504913,0.06418934978153407,Inf,0.18441894608764056,0.436036573613342,low,NA
+genera_structure_models,basal_area,basal_area ~ struc_complexity * generic_richness + (1 | block),struc_complexity,NA,0.44657452582317236,0.0944884268485854,Inf,0.2613806122440976,0.6317684394022471,high,NA
+genera_structure_models,basal_area,basal_area ~ struc_complexity * generic_richness + (1 | block),generic_richness,NA,0.368619331622096,0.07226718307239957,Inf,0.2269782555360302,0.5102604077081617,NA,2-genera
+genera_structure_models,basal_area,basal_area ~ struc_complexity * generic_richness + (1 | block),generic_richness,NA,0.38818295405156766,0.08679571488292732,Inf,0.218066478868623,0.5582994292345124,NA,4-genera
+genera_structure_models,seedling_density,seedling_density ~ struc_complexity * generic_richness + (1 | block),struc_complexity,NA,101.1875000110123,8.59040472246183,Inf,84.35061614236432,118.02438387966029,low,NA
+genera_structure_models,seedling_density,seedling_density ~ struc_complexity * generic_richness + (1 | block),struc_complexity,NA,156.74999958631219,13.152202535641248,Inf,130.97215629907896,182.5278428735454,high,NA
+genera_structure_models,seedling_density,seedling_density ~ struc_complexity * generic_richness + (1 | block),generic_richness,NA,118.56249953067828,10.153527436166804,Inf,98.66195143975204,138.46304762160452,NA,2-genera
+genera_structure_models,seedling_density,seedling_density ~ struc_complexity * generic_richness + (1 | block),generic_richness,NA,139.3750000666462,11.986716205234176,Inf,115.8814680114846,162.86853212180782,NA,4-genera
