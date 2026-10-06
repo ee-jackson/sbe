@@ -5,6 +5,8 @@
 ## Desc: Fit basal-area, seedling-density, and biodiversity-effect models
 ## Date created: 2026-09-11
 
+set.seed(20732)
+
 # Packages ----------------------------------------------------------------
 
 library("tidyverse")
@@ -147,6 +149,22 @@ summarise_contrasts <- function(grid) {
 		as_tibble()
 }
 
+get_predictions <- function(model, response_name) {
+	emmeans(
+		model,
+		~log_base4_species_richness,
+		at = list(log_base4_species_richness = 0:2)
+	) |>
+		broom::tidy(conf.int = TRUE) |>
+		mutate(
+			log_base4_species_richness,
+			species_richness = 4^log_base4_species_richness,
+			estimate,
+			conf.low,
+			conf.high,
+			.keep = "none"
+		)
+}
 
 # Data --------------------------------------------------------------------
 
@@ -186,6 +204,9 @@ plot_data <- read_rds(
 			)
 		)
 	)
+
+# I will use this data for plotting later.
+saveRDS(plot_data, here::here("data", "derived", "data_plot_lvl.rds"))
 
 # A one-unit change represents a fourfold increase in species richness.
 partition_data <- read_rds(
@@ -309,12 +330,13 @@ dev.off()
 # Retain conditional-model coefficients on the link scale and transform
 # them to the response scale using each model's inverse link.
 coefficients_out <- models_out |>
-	transmute(
+	mutate(
 		model_set,
 		response,
 		formula,
 		link = map_chr(fit, \(model) stats::family(model)$link),
-		result = map(fit, tidy_fixed_effects)
+		result = map(fit, tidy_fixed_effects),
+		.keep = "none"
 	) |>
 	unnest(result) |>
 	rename(
@@ -335,11 +357,12 @@ write_csv(
 
 # Keep model-level statistics separate because they have one row per model.
 model_fit_out <- models_out |>
-	transmute(
+	mutate(
 		model_set,
 		response,
 		formula,
-		result = map(fit, broom.mixed::glance)
+		result = map(fit, broom.mixed::glance),
+		.keep = "none"
 	) |>
 	unnest(result)
 
@@ -379,4 +402,40 @@ contrasts_out <- emm_grids |>
 write_csv(
 	contrasts_out,
 	here::here("output", "results", "contrasts_out.csv")
+)
+
+
+# Generate predictions ---------------------------------------------------
+
+# Generate predictions only for models with continuous predictors.
+predictions_out <-
+	models_out |>
+	filter_out(map_lgl(fit, has_factor_predictor)) |>
+	mutate(
+		model_set,
+		response,
+		formula,
+		link = map_chr(fit, \(model) stats::family(model)$link),
+		predictions = map2(fit, response, get_predictions),
+		.keep = "none"
+	) |>
+	unnest(predictions) |>
+	rename(
+		estimate_link = estimate,
+		conf_low_link = conf.low,
+		conf_high_link = conf.high
+	) |>
+	mutate(
+		estimate_response = inverse_link(estimate_link, link),
+		conf_low_response = inverse_link(conf_low_link, link),
+		conf_high_response = inverse_link(conf_high_link, link)
+	) |>
+	filter_out(
+		model_set == "biodiversity_partition_models" &
+			species_richness == 1
+	)
+
+write_csv(
+	predictions_out,
+	here::here("output", "results", "predictions_out.csv")
 )
