@@ -4,7 +4,10 @@ sbe_colours <- c(
 	"1-species" = "#009E73",
 	"4-species" = "#E69F00FF",
 	"16-species" = "#56B4E9FF",
-	"16-species-cut" = "#F0E442"
+	"16-species-cut" = "#56B4E9FF",
+	"1" = "#009E73",
+	"4" = "#E69F00FF",
+	"16" = "#56B4E9FF"
 )
 
 sbe_labels <- c(
@@ -14,7 +17,19 @@ sbe_labels <- c(
 	"16-species-cut" = "16 Species mix\nliana cutting",
 	"compl" = "Complementarity effect",
 	"selec" = "Selection effect",
-	"net" = "Net biodiversity effect"
+	"net" = "Net biodiversity effect",
+	"dens_compl" = "Complementarity effect, density",
+	"dens_selec" = "Selection effect, density",
+	"size_compl" = "Complementarity effect, size",
+	"size_selec" = "Selection effect, size",
+	"complementarity" = "Complementarity effect",
+	"selection" = "Selection effect",
+	"basal_area" = "Basal area (m²)",
+	"seedling_density" = "Seedling density",
+	"complementarity_density" = "Complementarity effect, density",
+	"selection_density" = "Selection effect, density",
+	"complementarity_size" = "Complementarity effect, size",
+	"selection_size" = "Selection effect, size"
 )
 
 sbe_relabel <- function(x) {
