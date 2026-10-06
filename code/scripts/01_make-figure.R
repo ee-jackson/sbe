@@ -49,7 +49,8 @@ p <-
 		xlim = c(as.Date("2002-01-01"), as.Date(as.Date("2026-01-01"))),
 		expand = FALSE
 	) +
-	labs(x = "Year", y = expression("Summed basal area" ~ (m^2)), fill = "")
+	labs(x = "Year", y = expression("Summed basal area" ~ (m^2)), fill = "") +
+	scale_fill_manual(values = c("#0072B2", "#D55E00"))
 
 # seedling density - looks a bit odd beacuse of the 2nd round of planting
 p_dens <-
