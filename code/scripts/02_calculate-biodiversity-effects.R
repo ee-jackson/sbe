@@ -52,7 +52,7 @@ init_dens <-
 	filter(census_no == "02") |>
 	group_by(plot, genus_species) |>
 	arrange(plot, genus_species) |>
-	summarise(n = n_distinct(plant_id), .groups = "drop") |>
+	summarise(n = sum(survival), .groups = "drop") |>
 	pivot_wider(
 		id_cols = plot,
 		names_from = genus_species,
@@ -87,7 +87,7 @@ final_dens <-
 
 final_yield <-
 	data |>
-	filter(census_no == "03") |>
+	filter(census_no == "03", survival == 1) |>
 	mutate(dbase_m = dbase_mm / 1000) |>
 	mutate(basal_area_m2 = pi * (dbase_m / 2)^2) |>
 	group_by(plot, genus_species) |>
