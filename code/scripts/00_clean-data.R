@@ -698,6 +698,7 @@ data_backfilled <-
 			"low",
 			"high"
 		)
-	)
+	) |>
+	filter_out(plant_id == "001_16_037_O") # suspected measurement error
 
 saveRDS(data_backfilled, here::here("data", "derived", "data_cleaned.rds"))

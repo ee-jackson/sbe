@@ -1,14 +1,14 @@
 model_set,response,formula,nobs,sigma,logLik,AIC,BIC,df.residual,deviance
-species_richness_models,basal_area,basal_area ~ log_base4_species_richness + (1 | block),96,0.5494430383044417,-12.757295444431605,33.51459088886321,43.771983654734555,92,NA
-species_richness_models,seedling_density,seedling_density ~ log_base4_species_richness + (1 | block),96,NA,-515.1552630141967,1042.3105260283935,1057.6966151772006,90,48.685646859808045
+species_richness_models,basal_area,basal_area ~ log_base4_species_richness + (1 | block),96,0.543559185145188,-12.2788575196078,32.5577150392156,42.815107805086946,92,NA
+species_richness_models,seedling_density,seedling_density ~ log_base4_species_richness + (1 | block),96,NA,-515.1281140110416,1042.2562280220832,1057.6423171708902,90,48.67227996340244
 liana_cut_models,basal_area,basal_area ~ 0 + liana_treatment + (1 | block),48,0.37941942844444715,-3.3188600008063487,14.637720001612697,22.122524045244262,44,NA
 liana_cut_models,seedling_density,seedling_density ~ 0 + liana_treatment + (1 | block),48,12.636087828335793,-241.83397241675155,491.6679448335031,499.1527488771347,44,47.40919434024366
-genera_structure_models,basal_area,basal_area ~ struc_complexity * generic_richness + (1 | block),32,0.4311147670309005,5.914155167649409,0.17168966470118185,8.96610508149954,26,NA
-genera_structure_models,seedling_density,seedling_density ~ struc_complexity * generic_richness + (1 | block),32,9.507152501023791,-164.06034713104268,340.12069426208535,348.9151096788837,26,32.566601667598654
-biodiversity_partition_models,net,net ~ log_base4_species_richness + (1 | block),64,0.20712653846372872,-18.624549436855926,47.24909887371185,58.04351429051021,59,NA
-biodiversity_partition_models,complementarity,compl ~ log_base4_species_richness + (1 | block),64,0.27383366054690594,-36.35921445978309,82.71842891956618,93.51284433636454,59,NA
-biodiversity_partition_models,complementarity_size,size_compl ~ log_base4_species_richness + (1 | block),64,0.21409963257997405,-16.404567704170116,42.80913540834023,53.60355082513859,59,NA
-biodiversity_partition_models,complementarity_density,dens_compl ~ log_base4_species_richness + (1 | block),64,0.14866859106867292,9.78134602180291,-9.562692043605821,1.231723373192537,59,NA
-biodiversity_partition_models,selection,selec ~ log_base4_species_richness + (1 | block),64,0.09488708813527293,18.586166159630423,-27.172332319260846,-16.377916902462488,59,NA
-biodiversity_partition_models,selection_size,size_selec ~ log_base4_species_richness + (1 | block),64,0.07782093193481082,36.74897248677589,-63.49794497355178,-52.70352955675342,59,NA
-biodiversity_partition_models,selection_density,dens_selec ~ log_base4_species_richness + (1 | block),64,0.058785168231626245,67.90090741151579,-125.80181482303158,-115.00739940623322,59,NA
+genera_structure_models,basal_area,basal_area ~ struc_complexity * generic_richness + (1 | block),32,0.41304820934841796,6.563862932114692,-1.1277258642293848,7.6666895525689736,26,NA
+genera_structure_models,seedling_density,seedling_density ~ struc_complexity * generic_richness + (1 | block),32,9.522750342846962,-164.0330988438453,340.0661976876906,348.86061310448895,26,32.56750418249075
+biodiversity_partition_models,net,net ~ log_base4_species_richness + (1 | block),64,0.20864714503014423,-18.179220921868005,46.35844184373601,57.15285726053437,59,NA
+biodiversity_partition_models,complementarity,compl ~ log_base4_species_richness + (1 | block),64,0.2754756328209613,-36.08351617705188,82.16703235410375,92.96144777090211,59,NA
+biodiversity_partition_models,complementarity_size,size_compl ~ log_base4_species_richness + (1 | block),64,0.21604062635720214,-16.004212972606627,42.008425945213254,52.80284136201161,59,NA
+biodiversity_partition_models,complementarity_density,dens_compl ~ log_base4_species_richness + (1 | block),64,0.14941565205121146,9.979224603761352,-9.958449207522705,0.8359662092756537,59,NA
+biodiversity_partition_models,selection,selec ~ log_base4_species_richness + (1 | block),64,0.09636928825013036,19.53653980568561,-29.07307961137122,-18.278664194572862,59,NA
+biodiversity_partition_models,selection_size,size_selec ~ log_base4_species_richness + (1 | block),64,0.07889383448820082,37.47726377620016,-64.95452755240032,-54.16011213560196,59,NA
+biodiversity_partition_models,selection_density,dens_selec ~ log_base4_species_richness + (1 | block),64,0.06258480801787193,66.94288447521207,-123.88576895042414,-113.09135353362578,59,NA
