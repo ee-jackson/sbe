@@ -629,6 +629,11 @@ data_backfilled <-
 data_backfilled <-
 	data_backfilled |>
 	mutate(
+		species_mix = as.character(species_mix) |>
+			replace_when(
+				species_mix == "monoculture" ~
+					genus_species
+			),
 		census_yr = case_when(
 			census_no == "01" ~ "2003-2007",
 			census_no == "02" ~ "2011-2013",
